@@ -11,6 +11,9 @@ export CONFIG_VIDEO_INTEL_IPU7 = m
 obj-y += drivers/media/pci/intel/ipu7/
 subdir-ccflags-y += -I$(src)/include
 
+export CONFIG_VIDEO_OV02C10 = m
+obj-y += drivers/media/i2c/
+
 subdir-ccflags-y += $(subdir-ccflags-m)
 
 all:
