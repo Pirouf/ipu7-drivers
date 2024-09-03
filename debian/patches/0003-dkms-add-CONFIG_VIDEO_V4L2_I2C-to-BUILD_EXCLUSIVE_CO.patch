@@ -1,0 +1,24 @@
+From: You-Sheng Yang <vicamo.yang@canonical.com>
+Date: Wed, 10 Jul 2024 00:04:33 +0800
+Subject: dkms: add CONFIG_VIDEO_V4L2_I2C to BUILD_EXCLUSIVE_CONFIG
+
+Add CONFIG_VIDEO_V4L2_I2C as a dependency for the ipu7 drivers so that
+it skips the build on unsupported platforms.
+
+Signed-off-by: You-Sheng Yang <vicamo.yang@canonical.com>
+---
+ dkms.conf | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dkms.conf b/dkms.conf
+index 834dfaf..78a4d78 100644
+--- a/dkms.conf
++++ b/dkms.conf
+@@ -4,6 +4,7 @@ PACKAGE_VERSION="#MODULE_VERSION#"
+ MAKE="make KERNELRELEASE=$kernelver KERNEL_SRC=$kernel_source_dir"
+ CLEAN="make KERNELRELEASE=$kernelver KERNEL_SRC=$kernel_source_dir clean"
+ AUTOINSTALL="yes"
++BUILD_EXCLUSIVE_CONFIG="CONFIG_VIDEO_V4L2_I2C"
+ 
+ BUILT_MODULE_NAME[0]="intel-ipu7"
+ BUILT_MODULE_LOCATION[0]="drivers/media/pci/intel/ipu7"

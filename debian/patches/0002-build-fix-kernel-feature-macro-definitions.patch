@@ -1,0 +1,30 @@
+From: You-Sheng Yang <vicamo.yang@canonical.com>
+Date: Tue, 9 Jul 2024 23:52:06 +0800
+Subject: build: fix kernel feature macro definitions
+
+CONFIG_IPU_BRIDGE is governed by in-tree Kconfig. Just follow the
+setting.
+
+Signed-off-by: You-Sheng Yang <vicamo.yang@canonical.com>
+---
+ Makefile | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 18e2602..7c13104 100644
+--- a/Makefile
++++ b/Makefile
+@@ -7,13 +7,10 @@ MODSRC := $(shell pwd)
+ 
+ export EXTERNAL_BUILD = 1
+ export CONFIG_VIDEO_INTEL_IPU7 = m
+-export CONFIG_IPU_BRIDGE = y
+ 
+ obj-y += drivers/media/pci/intel/ipu7/
+ subdir-ccflags-y += -I$(src)/include
+ 
+-subdir-ccflags-$(CONFIG_IPU_BRIDGE) += \
+-	-DCONFIG_IPU_BRIDGE
+ subdir-ccflags-y += $(subdir-ccflags-m)
+ 
+ all:

@@ -1,0 +1,4 @@
+0001-dkms-use-debian-package-version-as-PACKAGE_VERSION.patch
+0002-build-fix-kernel-feature-macro-definitions.patch
+0003-dkms-add-CONFIG_VIDEO_V4L2_I2C-to-BUILD_EXCLUSIVE_CO.patch
+0004-media-ov02c10-copy-driver-source-from-ipu6-drivers.patch

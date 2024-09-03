@@ -1,0 +1,27 @@
+Source: ipu7-drivers
+Section: kernel
+Priority: optional
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: You-Sheng Yang <vicamo.yang@canonical.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-modaliases,
+ dkms,
+ dh-sequence-dkms,
+ quilt,
+Standards-Version: 4.7.0
+Homepage: https://github.com/intel/ipu7-drivers
+Vcs-Browser: https://code.launchpad.net/~vicamo/ubuntu/+source/ipu7-drivers/+git/ipu7-drivers
+Vcs-Git: https://code.launchpad.net/~vicamo/ubuntu/+source/ipu7-drivers/+git/ipu7-drivers
+
+Package: intel-ipu7-dkms
+Architecture: amd64
+Depends:
+ dkms,
+ ${misc:Depends},
+Provides: ipu7-modules
+XB-Modaliases: ${modaliases}
+Description: Intel Integrated Image Processing Unit 7 (IPU7) driver
+ This package provides kernel drivers for MIPI cameras through the Intel IPU7
+ on Intel Lunar Lake or later platforms.

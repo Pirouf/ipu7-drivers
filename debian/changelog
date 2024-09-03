@@ -1,0 +1,19 @@
+ipu7-drivers (0~git202407090310.f40d5a70-0ubuntu2) oracular; urgency=medium
+
+  * copyright: Fix license for debian/.
+  * control: Update Vcs entries.
+  * control: Bump standards to 4.7.0.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 03 Sep 2024 11:48:14 +0300
+
+ipu7-drivers (0~git202407090310.f40d5a70-0ubuntu1) oracular; urgency=low
+
+  [ You-Sheng Yang ]
+  * Upstream commit f40d5a70 on 2024-07-02. (LP: #2078326)
+  * debianize
+    - dkms: use debian package version as PACKAGE_VERSION
+    - build: fix kernel feature macro definitions
+    - dkms: add CONFIG_VIDEO_V4L2_I2C to BUILD_EXCLUSIVE_CONFIG
+    - media: ov02c10: copy driver source from ipu6-drivers
+
+ -- You-Sheng Yang <vicamo.yang@canonical.com>  Mon, 12 Aug 2024 15:30:48 +0800
