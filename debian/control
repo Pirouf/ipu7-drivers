@@ -12,8 +12,8 @@ Build-Depends:
  quilt,
 Standards-Version: 4.7.0
 Homepage: https://github.com/intel/ipu7-drivers
-Vcs-Browser: https://code.launchpad.net/~vicamo/ubuntu/+source/ipu7-drivers/+git/ipu7-drivers
-Vcs-Git: https://code.launchpad.net/~vicamo/ubuntu/+source/ipu7-drivers/+git/ipu7-drivers
+Vcs-Browser: https://git.launchpad.net/ubuntu/+source/ipu7-drivers
+Vcs-Git: https://git.launchpad.net/ubuntu/+source/ipu7-drivers
 
 Package: intel-ipu7-dkms
 Architecture: amd64

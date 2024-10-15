@@ -1,0 +1,38 @@
+From: You-Sheng Yang <vicamo.yang@canonical.com>
+Date: Fri, 11 Oct 2024 02:27:46 +0800
+Subject: UBUNTU: SAUCE: backport: move asm/unaligned.h to linux/unaligned.h
+
+Accommodate to v6.12-rc2 commit 5f60d5f6bbc12 ("move asm/unaligned.h to
+linux/unaligned.h").
+
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/2083997
+Signed-off-by: You-Sheng Yang <vicamo.yang@canonical.com>
+---
+ drivers/media/i2c/ov02c10.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/ov02c10.c b/drivers/media/i2c/ov02c10.c
+index 40865f8..0a1fed1 100644
+--- a/drivers/media/i2c/ov02c10.c
++++ b/drivers/media/i2c/ov02c10.c
+@@ -1,7 +1,12 @@
+ // SPDX-License-Identifier: GPL-2.0
+ // Copyright (c) 2022 Intel Corporation.
+ 
++#include <linux/version.h>
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
+ #include <asm/unaligned.h>
++#else
++#include <linux/unaligned.h>
++#endif
+ #include <linux/acpi.h>
+ #include <linux/clk.h>
+ #include <linux/delay.h>
+@@ -9,7 +14,6 @@
+ #include <linux/i2c.h>
+ #include <linux/module.h>
+ #include <linux/pm_runtime.h>
+-#include <linux/version.h>
+ #include <media/v4l2-ctrls.h>
+ #include <media/v4l2-device.h>
+ #include <media/v4l2-fwnode.h>

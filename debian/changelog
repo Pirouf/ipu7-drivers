@@ -1,3 +1,17 @@
+ipu7-drivers (0~git202409300310.526ed27f-0ubuntu1) plucky; urgency=medium
+
+  [ You-Sheng Yang ]
+  * New upstream commit 526ed27f. (LP: #2084524)
+    - drop upstreamed patch
+      0003-dkms-add-CONFIG_VIDEO_V4L2_I2C-to-BUILD_EXCLUSIVE_CO.patch
+  * debian: update Vcs info
+  * Failed to build against linux-6.12, multiple errors (LP: #2083997)
+    - SAUCE: backport: dma-mapping: don't return errors from
+      dma_set_max_seg_size
+    - SAUCE: backport: move asm/unaligned.h to linux/unaligned.h
+
+ -- You-Sheng Yang <vicamo.yang@canonical.com>  Tue, 15 Oct 2024 16:40:55 +0800
+
 ipu7-drivers (0~git202407090310.f40d5a70-0ubuntu2) oracular; urgency=medium
 
   * copyright: Fix license for debian/.
