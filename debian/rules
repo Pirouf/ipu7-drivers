@@ -4,7 +4,7 @@
 include /usr/share/dpkg/pkg-info.mk
 
 DKMS_PACKAGE_NAME = $(shell grep '^PACKAGE_NAME=' dkms.conf | cut -d\" -f2)
-DKMS_PACKAGE_VERSION = $(DEB_VERSION)
+DKMS_PACKAGE_VERSION = $(DEB_VERSION_UPSTREAM)
 
 generated_dkms_files = \
   debian/intel-ipu7-dkms.install \

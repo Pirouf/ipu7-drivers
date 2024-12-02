@@ -1,3 +1,20 @@
+ipu7-drivers (0~git202412060257.0fc08453-0ubuntu1) plucky; urgency=medium
+
+  * Checkbox camera test leaves system powered off with 1-Amber-8-White debug
+    LED on Dell Bolan platforms (LP: #2090821)
+    - media: ipu7: Block suspend when PSYS is on
+
+  * Trigger camera_quality_test.py multiple times breaks the ipu7 camera
+    (LP: #2092080)
+    - media: ipu7: Use pm_runtime_put_sync when release PSYS
+    - media: ipu7: Check number of terminal when building graph
+    - media: ipu7: Remove TODOs for PSYS driver
+
+  * media: intel-ipu7: ignore of the BIT 0 of PB local irq status
+    (LP: #2091153)
+
+ -- You-Sheng Yang <vicamo.yang@canonical.com>  Mon, 02 Dec 2024 15:39:08 +0800
+
 ipu7-drivers (0~git202409300310.526ed27f-0ubuntu1) plucky; urgency=medium
 
   [ You-Sheng Yang ]
