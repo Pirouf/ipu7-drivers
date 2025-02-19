@@ -19,7 +19,7 @@ struct imx390_platform_data {
 	int irq_pin;
 	unsigned int irq_pin_flags;
 	char irq_pin_name[16];
-	char suffix;
+	char suffix[5];
 	int gpios[4];
 };
 
