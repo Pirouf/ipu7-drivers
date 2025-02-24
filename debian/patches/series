@@ -3,3 +3,4 @@
 0004-media-ov02c10-copy-driver-source-from-ipu6-drivers.patch
 0005-UBUNTU-SAUCE-backport-dma-mapping-don-t-return-error.patch
 0006-UBUNTU-SAUCE-backport-move-asm-unaligned.h-to-linux-.patch
+lp-2099881-media-ipu7-Fix-building-with-kernel-6.13.patch

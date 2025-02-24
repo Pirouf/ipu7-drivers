@@ -1,0 +1,389 @@
+From: You-Sheng Yang <vicamo.yang@canonical.com>
+Date: Mon, 24 Feb 2025 22:12:25 +0800
+Subject: media: ipu7: Fix building with kernel 6.13
+
+v6.13-rc2 cdd30ebb1b9f3 ("module: Convert symbol namespace to string
+literal") expects string literals than symbol names.
+
+Apply fix similar to ipu6-drivers: https://github.com/intel/ipu6-drivers/pull/321
+Fixed upstream via PTL Alpha release candidate on 2025-01-10:
+https://github.com/intel/ipu7-drivers/pull/20
+
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/2099881
+Forwarded: not-needed
+Last-Update: 2025-03-04
+Signed-off-by: You-Sheng Yang <vicamo.yang@canonical.com>
+---
+ drivers/media/pci/intel/ipu7/ipu7-boot.c     | 21 ++++++++++++++++++
+ drivers/media/pci/intel/ipu7/ipu7-buttress.c | 33 ++++++++++++++++++++++++++++
+ drivers/media/pci/intel/ipu7/ipu7-cpd.c      |  9 ++++++++
+ drivers/media/pci/intel/ipu7/ipu7-isys.c     |  6 +++++
+ drivers/media/pci/intel/ipu7/ipu7-mmu.c      |  9 ++++++++
+ drivers/media/pci/intel/ipu7/ipu7-syscom.c   | 13 +++++++++++
+ drivers/media/pci/intel/ipu7/ipu7.c          |  8 +++++++
+ drivers/media/pci/intel/ipu7/psys/ipu-psys.c |  6 +++++
+ 8 files changed, 105 insertions(+)
+
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-boot.c b/drivers/media/pci/intel/ipu7/ipu7-boot.c
+index d6f827a..a4a780f 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-boot.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-boot.c
+@@ -11,6 +11,7 @@
+ #include <linux/iopoll.h>
+ #include <linux/string.h>
+ #include <linux/types.h>
++#include <linux/version.h>
+ 
+ #include "abi/ipu7_fw_boot_abi.h"
+ 
+@@ -292,7 +293,11 @@ int ipu7_boot_init_boot_config(struct ipu7_bus_device *adev,
+ 
+ 	return 0;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_boot_init_boot_config, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_boot_init_boot_config, INTEL_IPU7);
++#endif
+ 
+ void ipu7_boot_release_boot_config(struct ipu7_bus_device *adev)
+ {
+@@ -315,7 +320,11 @@ void ipu7_boot_release_boot_config(struct ipu7_bus_device *adev)
+ 		adev->boot_config_dma_addr = 0;
+ 	}
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_boot_release_boot_config, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_boot_release_boot_config, INTEL_IPU7);
++#endif
+ 
+ int ipu7_boot_start_fw(const struct ipu7_bus_device *adev)
+ {
+@@ -389,7 +398,11 @@ int ipu7_boot_start_fw(const struct ipu7_bus_device *adev)
+ 
+ 	return 0;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_boot_start_fw, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_boot_start_fw, INTEL_IPU7);
++#endif
+ 
+ int ipu7_boot_stop_fw(const struct ipu7_bus_device *adev)
+ {
+@@ -432,10 +445,18 @@ int ipu7_boot_stop_fw(const struct ipu7_bus_device *adev)
+ 
+ 	return 0;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_boot_stop_fw, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_boot_stop_fw, INTEL_IPU7);
++#endif
+ 
+ u32 ipu7_boot_get_boot_state(const struct ipu7_bus_device *adev)
+ {
+ 	return read_fw_boot_param(adev, IA_GOFO_FW_BOOT_STATE_ID);
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_boot_get_boot_state, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_boot_get_boot_state, INTEL_IPU7);
++#endif
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-buttress.c b/drivers/media/pci/intel/ipu7/ipu7-buttress.c
+index 691ed0a..a6d9c7d 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-buttress.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-buttress.c
+@@ -22,6 +22,7 @@
+ #include <linux/pm_runtime.h>
+ #include <linux/scatterlist.h>
+ #include <linux/types.h>
++#include <linux/version.h>
+ 
+ #include "ipu7.h"
+ #include "ipu7-bus.h"
+@@ -621,7 +622,11 @@ bool ipu7_buttress_auth_done(struct ipu7_device *isp)
+ 
+ 	return val == BUTTRESS_SECURITY_CTL_AUTH_DONE;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_buttress_auth_done, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_buttress_auth_done, INTEL_IPU7);
++#endif
+ 
+ int ipu7_buttress_get_isys_freq(struct ipu7_device *isp, u32 *freq)
+ {
+@@ -643,7 +648,11 @@ int ipu7_buttress_get_isys_freq(struct ipu7_device *isp, u32 *freq)
+ 
+ 	return 0;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_buttress_get_isys_freq, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_buttress_get_isys_freq, INTEL_IPU7);
++#endif
+ 
+ int ipu7_buttress_get_psys_freq(struct ipu7_device *isp, u32 *freq)
+ {
+@@ -666,7 +675,11 @@ int ipu7_buttress_get_psys_freq(struct ipu7_device *isp, u32 *freq)
+ 
+ 	return 0;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_buttress_get_psys_freq, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_buttress_get_psys_freq, INTEL_IPU7);
++#endif
+ 
+ int ipu7_buttress_reset_authentication(struct ipu7_device *isp)
+ {
+@@ -873,7 +886,11 @@ int ipu7_buttress_start_tsc_sync(struct ipu7_device *isp)
+ 
+ 	return -ETIMEDOUT;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_buttress_start_tsc_sync, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_buttress_start_tsc_sync, INTEL_IPU7);
++#endif
+ 
+ void ipu7_buttress_tsc_read(struct ipu7_device *isp, u64 *val)
+ {
+@@ -891,7 +908,11 @@ void ipu7_buttress_tsc_read(struct ipu7_device *isp, u64 *val)
+ 	*val = (u64)tsc_hi << 32 | tsc_lo;
+ 	local_irq_restore(flags);
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_buttress_tsc_read, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_buttress_tsc_read, INTEL_IPU7);
++#endif
+ 
+ #ifdef CONFIG_DEBUG_FS
+ static int ipu7_buttress_isys_freq_get(void *data, u64 *val)
+@@ -1040,7 +1061,11 @@ u64 ipu7_buttress_tsc_ticks_to_ns(u64 ticks, const struct ipu7_device *isp)
+ 	 */
+ 	return div_u64(ns, isp->buttress.ref_clk);
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_buttress_tsc_ticks_to_ns, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_buttress_tsc_ticks_to_ns, INTEL_IPU7);
++#endif
+ 
+ /* trigger uc control to wakeup fw */
+ void ipu7_buttress_wakeup_is_uc(const struct ipu7_device *isp)
+@@ -1051,7 +1076,11 @@ void ipu7_buttress_wakeup_is_uc(const struct ipu7_device *isp)
+ 	val |= UCX_CTL_WAKEUP;
+ 	writel(val, isp->base + BUTTRESS_REG_DRV_IS_UCX_CONTROL_STATUS);
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_buttress_wakeup_is_uc, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_buttress_wakeup_is_uc, INTEL_IPU7);
++#endif
+ 
+ void ipu7_buttress_wakeup_ps_uc(const struct ipu7_device *isp)
+ {
+@@ -1061,7 +1090,11 @@ void ipu7_buttress_wakeup_ps_uc(const struct ipu7_device *isp)
+ 	val |= UCX_CTL_WAKEUP;
+ 	writel(val, isp->base + BUTTRESS_REG_DRV_PS_UCX_CONTROL_STATUS);
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_buttress_wakeup_ps_uc, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_buttress_wakeup_ps_uc, INTEL_IPU7);
++#endif
+ 
+ static void ipu7_buttress_setup(struct ipu7_device *isp)
+ {
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-cpd.c b/drivers/media/pci/intel/ipu7/ipu7-cpd.c
+index 104421b..4a30b62 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-cpd.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-cpd.c
+@@ -10,6 +10,7 @@
+ #include <linux/sizes.h>
+ #include <linux/slab.h>
+ #include <linux/types.h>
++#include <linux/version.h>
+ 
+ #include "ipu7.h"
+ #include "ipu7-cpd.h"
+@@ -204,7 +205,11 @@ int ipu7_cpd_validate_cpd_file(struct ipu7_device *isp, const void *cpd_file,
+ 
+ 	return 0;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_cpd_validate_cpd_file, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_cpd_validate_cpd_file, INTEL_IPU7);
++#endif
+ 
+ int ipu7_cpd_copy_binary(const void *cpd, const char *name,
+ 			 void *code_region, u32 *entry)
+@@ -226,4 +231,8 @@ int ipu7_cpd_copy_binary(const void *cpd, const char *name,
+ 	}
+ 	return -ENOENT;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_cpd_copy_binary, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_cpd_copy_binary, INTEL_IPU7);
++#endif
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys.c b/drivers/media/pci/intel/ipu7/ipu7-isys.c
+index 9d65ba2..a8cf64d 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys.c
+@@ -27,6 +27,7 @@
+ #include <linux/spinlock.h>
+ #include <linux/string.h>
+ #include <linux/types.h>
++#include <linux/version.h>
+ 
+ #include <media/ipu-bridge.h>
+ #include <media/media-entity.h>
+@@ -1371,5 +1372,10 @@ MODULE_AUTHOR("Tianshu Qiu <tian.shu.qiu@intel.com>");
+ MODULE_AUTHOR("Qingwu Zhang <qingwu.zhang@intel.com>");
+ MODULE_LICENSE("GPL");
+ MODULE_DESCRIPTION("Intel ipu7 input system driver");
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++MODULE_IMPORT_NS("INTEL_IPU7");
++MODULE_IMPORT_NS("INTEL_IPU_BRIDGE");
++#else
+ MODULE_IMPORT_NS(INTEL_IPU7);
+ MODULE_IMPORT_NS(INTEL_IPU_BRIDGE);
++#endif
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-mmu.c b/drivers/media/pci/intel/ipu7/ipu7-mmu.c
+index 90ed8dd..1dbe1fe 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-mmu.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-mmu.c
+@@ -24,6 +24,7 @@
+ #include <linux/slab.h>
+ #include <linux/spinlock.h>
+ #include <linux/types.h>
++#include <linux/version.h>
+ #include <linux/vmalloc.h>
+ 
+ #include "ipu7.h"
+@@ -579,7 +580,11 @@ int ipu7_mmu_hw_init(struct ipu7_mmu *mmu)
+ 
+ 	return 0;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_mmu_hw_init, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_mmu_hw_init, INTEL_IPU7);
++#endif
+ 
+ static struct ipu7_mmu_info *ipu7_mmu_alloc(struct ipu7_device *isp)
+ {
+@@ -648,7 +653,11 @@ void ipu7_mmu_hw_cleanup(struct ipu7_mmu *mmu)
+ 	mmu->ready = false;
+ 	spin_unlock_irqrestore(&mmu->ready_lock, flags);
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_mmu_hw_cleanup, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_mmu_hw_cleanup, INTEL_IPU7);
++#endif
+ 
+ static struct ipu7_dma_mapping *alloc_dma_mapping(struct ipu7_device *isp)
+ {
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-syscom.c b/drivers/media/pci/intel/ipu7/ipu7-syscom.c
+index f24590f..fe47440 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-syscom.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-syscom.c
+@@ -5,6 +5,7 @@
+ 
+ #include <linux/export.h>
+ #include <linux/io.h>
++#include <linux/version.h>
+ 
+ #include "abi/ipu7_fw_syscom_abi.h"
+ 
+@@ -48,7 +49,11 @@ void *ipu7_syscom_get_token(struct ipu7_syscom_context *ctx, int q)
+ 	}
+ 	return token;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_syscom_get_token, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_syscom_get_token, INTEL_IPU7);
++#endif
+ 
+ void ipu7_syscom_put_token(struct ipu7_syscom_context *ctx, int q)
+ {
+@@ -68,12 +73,20 @@ void ipu7_syscom_put_token(struct ipu7_syscom_context *ctx, int q)
+ 	writel((index + 1U) % queue_params->max_capacity,
+ 	       queue_indices + offset);
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_syscom_put_token, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_syscom_put_token, INTEL_IPU7);
++#endif
+ 
+ struct syscom_queue_params_config *
+ ipu7_syscom_get_queue_config(struct syscom_config_s *config)
+ {
+ 	return (struct syscom_queue_params_config *)(&config[1]);
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_syscom_get_queue_config, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_syscom_get_queue_config, INTEL_IPU7);
++#endif
+ 
+diff --git a/drivers/media/pci/intel/ipu7/ipu7.c b/drivers/media/pci/intel/ipu7/ipu7.c
+index fccefd3..06f8ec5 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7.c
++++ b/drivers/media/pci/intel/ipu7/ipu7.c
+@@ -1513,7 +1513,11 @@ void ipu7_dump_fw_error_log(const struct ipu7_bus_device *adev)
+ 	memcpy_fromio(&fw_error_log[adev->subsys], reg,
+ 		      sizeof(fw_error_log[adev->subsys]));
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++EXPORT_SYMBOL_NS_GPL(ipu7_dump_fw_error_log, "INTEL_IPU7");
++#else
+ EXPORT_SYMBOL_NS_GPL(ipu7_dump_fw_error_log, INTEL_IPU7);
++#endif
+ 
+ #ifdef CONFIG_DEBUG_FS
+ static struct debugfs_blob_wrapper isys_fw_error;
+@@ -2090,7 +2094,11 @@ static struct pci_driver ipu7_pci_driver = {
+ 
+ module_pci_driver(ipu7_pci_driver);
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++MODULE_IMPORT_NS("INTEL_IPU_BRIDGE");
++#else
+ MODULE_IMPORT_NS(INTEL_IPU_BRIDGE);
++#endif
+ MODULE_AUTHOR("Bingbu Cao <bingbu.cao@intel.com>");
+ MODULE_AUTHOR("Tianshu Qiu <tian.shu.qiu@intel.com>");
+ MODULE_AUTHOR("Qingwu Zhang <qingwu.zhang@intel.com>");
+diff --git a/drivers/media/pci/intel/ipu7/psys/ipu-psys.c b/drivers/media/pci/intel/ipu7/psys/ipu-psys.c
+index 0fc11df..4bb9fc3 100644
+--- a/drivers/media/pci/intel/ipu7/psys/ipu-psys.c
++++ b/drivers/media/pci/intel/ipu7/psys/ipu-psys.c
+@@ -17,6 +17,7 @@
+ #include <linux/poll.h>
+ #include <uapi/linux/sched/types.h>
+ #include <linux/uaccess.h>
++#include <linux/version.h>
+ #include <linux/vmalloc.h>
+ #include <linux/dma-mapping.h>
+ 
+@@ -1583,5 +1584,10 @@ MODULE_AUTHOR("Tianshu Qiu <tian.shu.qiu@intel.com>");
+ 
+ MODULE_LICENSE("GPL");
+ MODULE_DESCRIPTION("Intel ipu7 processing system driver");
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++MODULE_IMPORT_NS("INTEL_IPU7");
++MODULE_IMPORT_NS("DMA_BUF");
++#else
+ MODULE_IMPORT_NS(INTEL_IPU7);
+ MODULE_IMPORT_NS(DMA_BUF);
++#endif
