@@ -1,2 +1,3 @@
 alias pci:v00008086d0000645Dsv*sd*bc*sc*i* intel-ipu7
 alias pci:v00008086d0000B05Dsv*sd*bc*sc*i* intel-ipu7
+alias pci:v00008086d0000D719sv*sd*bc*sc*i* intel-ipu7
