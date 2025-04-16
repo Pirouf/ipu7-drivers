@@ -3,9 +3,7 @@
 #include <linux/interrupt.h>
 #include <media/ipu-acpi.h>
 #include <media/v4l2-mediabus.h>
-#if IS_ENABLED(CONFIG_VIDEO_ISX031)
 #include <media/i2c/isx031.h>
-#endif
 #if IS_ENABLED(CONFIG_VIDEO_D4XX)
 #include <media/i2c/d4xx_pdata.h>
 #include <media/i2c/d4xx-max929x_pdata.h>

@@ -41,9 +41,7 @@
 #include <media/i2c/lt6911uxe.h>
 #include <media/i2c/imx390.h>
 #include <media/i2c/ti960.h>
-#if IS_ENABLED(CONFIG_VIDEO_ISX031)
 #include <media/i2c/isx031.h>
-#endif
 #if IS_ENABLED(CONFIG_VIDEO_D4XX)
 #include <media/i2c/d4xx_pdata.h>
 #include <media/i2c/d4xx-max929x_pdata.h>
@@ -84,11 +82,8 @@ static const struct ipu_acpi_devices supported_devices[] = {
 #if IS_ENABLED(CONFIG_VIDEO_MAX9X)
 	{ "INTC10CM", IMX390_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, "max96724",
 		IMX390_D3CM_I2C_ADDRESS, 1600 },// new D3 IMX390 HID
-#endif
-#if IS_ENABLED(CONFIG_VIDEO_ISX031)
-	{ "INTC031M", ISX031_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, "max9x",
+	{ "INTC031M", ISX031_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, "max96724",
 		ISX031_I2C_ADDRESS, 1600 },	// D3 ISX031 HID
-#endif
 #endif
 #if IS_ENABLED(CONFIG_VIDEO_D4XX)
 	{ "INTC10CD", D457_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, D457_NAME,
@@ -118,11 +113,13 @@ static const struct acpi_device_id ipu_acpi_match[] = {
  *	{ "AR0234A", 0 },	// Custom HID
  */
 	{ "INTC10C0", 0 },	// AR0234 HID
+#if IS_ENABLED(CONFIG_VIDEO_MAX9X)
 	{ "INTC10CR", 0 },	// GMSL2 AR0234 HID
+#endif
 	{ "INTC10B1", 0 },	// LT6911UXC HID
+#if IS_ENABLED(CONFIG_VIDEO_MAX9X)
 	{ "INTC10C1", 0 },	// IMX390 HID
 	{ "INTC10CM", 0 },	// D3CMC68N-106-085 IMX390 HID
-#if IS_ENABLED(CONFIG_VIDEO_ISX031)
 	{ "INTC1031", 0 },	// ISX031 HID
 	{ "INTC031M", 0 },	// D3CMC68N-115-084 ISX031 HID
 #endif
