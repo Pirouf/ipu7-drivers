@@ -17,6 +17,7 @@ obj-y += drivers/media/pci/intel/ipu7/
 obj-y += drivers/media/platform/intel/
 subdir-ccflags-y += -I$(src)/include
 
+export CONFIG_VIDEO_AR0234=m
 export CONFIG_VIDEO_ISX031=m
 export CONFIG_VIDEO_MAX9X=m
 export CONFIG_VIDEO_D4XX_MAX9295 = m
