@@ -91,6 +91,10 @@ static const struct ipu_acpi_devices supported_devices[] = {
 #endif
 	{ "INTC10C5", LT6911UXE_NAME, get_sensor_pdata, NULL, 0, TYPE_DIRECT, NULL,
 		LT6911UXC_I2C_ADDRESS, 1200 },   // LT6911UXE HID
+        { "OTOC1031", "otocam", get_sensor_pdata, NULL, 0, TYPE_SERDES, "otocam",
+		ISX031_I2C_ADDRESS, 1600 },// OTOCAM 223 isx031 HID
+        { "OTOC1021", "otocam", get_sensor_pdata, NULL, 0, TYPE_SERDES, "otocam",
+		ISX031_I2C_ADDRESS, 1600 },// OTOCAM 222 isx021 HID
 };
 
 static int get_table_index(const char *acpi_name)
@@ -127,6 +131,8 @@ static const struct acpi_device_id ipu_acpi_match[] = {
 	{ "INTC10CD", 0 },	// D457 HID
 #endif
 	{ "INTC10C5", 0 },	// LT6911UXE HID
+	{ "OTOC1031", 0 },	// OTOCAM 223 isx031 HID
+	{ "OTOC1021", 0 },	// OTOCAM 222 isx021 HID
 	{},
 };
 
