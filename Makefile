@@ -19,6 +19,7 @@ subdir-ccflags-y += -I$(src)/include
 
 export CONFIG_VIDEO_AR0234=m
 export CONFIG_VIDEO_ISX031=m
+export CONFIG_VIDEO_IMX390=m
 export CONFIG_VIDEO_MAX9X=m
 export CONFIG_VIDEO_D4XX_MAX9295 = m
 export CONFIG_VIDEO_D4XX_MAX9296 = m

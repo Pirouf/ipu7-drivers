@@ -71,6 +71,12 @@ static const struct ipu_acpi_devices supported_devices[] = {
  *		sensor_physical_addr, link_freq(mbps) },	// Custom HID
  */
 
+	{ "D3000004", "D3CMCXXX-115-084", get_sensor_pdata, NULL, 0, TYPE_SERDES, "d3-max96724",
+		ISX031_I2C_ADDRESS, 1600 },       // ISX031+GMSL HID
+	{ "D3000005", "D3CMCXXX-106-084", get_sensor_pdata, NULL, 0, TYPE_SERDES, "d3-max96724",
+		IMX390_D3CM_I2C_ADDRESS, 1600 },       // IMX390+GMSL HID
+	{ "D3000006", "D3CMCXXX-089-084", get_sensor_pdata, NULL, 0, TYPE_SERDES, "d3-max96724",
+		AR0234_I2C_ADDRESS_8BIT, 1200 },       // AR0234+GMSL HID
 	{ "INTC10C0", AR0234_NAME, get_sensor_pdata, NULL, 0, TYPE_DIRECT, NULL,
 		AR0234_I2C_ADDRESS_8BIT, 1200 },	// AR0234 HID
 	{ "INTC10CR", AR0234_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, "max96724",
@@ -116,6 +122,9 @@ static const struct acpi_device_id ipu_acpi_match[] = {
 /*
  *	{ "AR0234A", 0 },	// Custom HID
  */
+	{ "D3000004", 0 },	// D3CMCXXX-115-084 HID
+	{ "D3000005", 0 },	// D3CMCXXX-106-084 HID
+	{ "D3000006", 0 },	// D3CMCXXX-089-084 HID
 	{ "INTC10C0", 0 },	// AR0234 HID
 #if IS_ENABLED(CONFIG_VIDEO_MAX9X)
 	{ "INTC10CR", 0 },	// GMSL2 AR0234 HID
