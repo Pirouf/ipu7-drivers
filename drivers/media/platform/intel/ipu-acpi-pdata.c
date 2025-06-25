@@ -19,6 +19,7 @@
 #define MIN_SENSOR_I2C 1
 #define MIN_SERDES_I2C 3
 #define SUFFIX_BASE 97
+#define SUFFIX_BASE_OFFSET 5 // SERDES aggregated-link offset
 
 struct ipu7_isys_subdev_pdata acpi_subdev_pdata = {
 	.subdevs = (struct ipu7_isys_subdev_info *[]) {
@@ -107,6 +108,7 @@ static void print_serdes_sdinfo(struct serdes_subdev_info *sdinfo)
 	pr_debug("\t\tphy_i2c_addr \t\t= 0x%x", sdinfo->phy_i2c_addr);
 	pr_debug("\t\tser_alias \t\t= 0x%x", sdinfo->ser_alias);
 	pr_debug("\t\tser_phys_addr \t\t= 0x%x", sdinfo->ser_phys_addr);
+	pr_debug("\t\taggregated_link \t= %u", sdinfo->aggregated_link);
 	pr_debug("\t\tsuffix \t\t\t= %s", sdinfo->suffix);
 	pr_debug("\t\tboard_info.type \t= %s", sdinfo->board_info.type);
 	pr_debug("\t\tboard_info.addr \t= 0x%x", sdinfo->board_info.addr);
@@ -281,13 +283,15 @@ static int set_serdes_subdev(struct ipu7_isys_subdev_info **serdes_sd,
 		const char *hid_name,
 		unsigned int lanes,
 		unsigned int addr,
+		unsigned int port,
 		unsigned int subdev_num)
 {
 	int i;
+	int serdes_suffix;
+	unsigned int suffix_offset;
 	struct serdes_module_pdata *module_pdata[PORT_NR];
 	struct serdes_subdev_info *serdes_sdinfo;
 	size_t subdev_size = subdev_num * sizeof(*serdes_sdinfo);
-	unsigned int port = (*pdata)->suffix - SUFFIX_BASE;
 
 	serdes_sdinfo = kzalloc(subdev_size, GFP_KERNEL);
 	if (!serdes_sdinfo)
@@ -313,18 +317,28 @@ static int set_serdes_subdev(struct ipu7_isys_subdev_info **serdes_sd,
 
 		serdes_sdinfo[i].phy_i2c_addr = serdes_info.phy_i2c_addr;
 #if IS_ENABLED(CONFIG_VIDEO_D4XX)
-		if (!strcmp(sensor_name, D457_NAME))
-			// keep D457 legacy
-			snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c",
-				 SUFFIX_BASE + i);
-		else
-#endif
+		/* define namespacing offset (suffix e -> a-4), for :
+		/*   - pprunit > 1, set # of deserializer aggregated-link  */
+		if ( (*pdata)->suffix > port + SUFFIX_BASE) {
+			serdes_sdinfo[i].aggregated_link = (*pdata)->suffix - (port + SUFFIX_BASE);
+			pr_info("IPU ACPI: Add namespacing %s, on aggregated-link sensors %d",
+				sensor_name,
+				serdes_info.deser_num);
+		} else {
+			serdes_sdinfo[i].aggregated_link = 0;
+		}
+	        snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c-%d",
+			 SUFFIX_BASE + i + serdes_sdinfo[i].aggregated_link , port);
+#else
 	        snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c-%d",
 			 SUFFIX_BASE + i, port);
-#if IS_ENABLED(CONFIG_VIDEO_ISX031)
+#endif
 		serdes_sdinfo[i].ser_phys_addr = 0x40;
 		serdes_sdinfo[i].sensor_dt = 0x1e;
-#endif
+		if (!strcmp(sensor_name, AR0234_NAME))
+			serdes_sdinfo[i].sensor_dt = 0x2B;  /* 10-bit raw */
+		else if (!strcmp(sensor_name, IMX390_NAME))
+			serdes_sdinfo[i].sensor_dt = 0x2C; /* 12-bit raw */
 	}
 
 	(*pdata)->subdev_info = serdes_sdinfo;
@@ -383,9 +397,13 @@ static int set_pdata(struct ipu7_isys_subdev_info **sensor_sd,
 		pr_debug("IPU ACPI: %s - Serdes connection", __func__);
 		/* use ascii */
 		if (port >= 0) {
-			pdata->suffix = port + SUFFIX_BASE;
-			pr_info("IPU ACPI: create %s on mipi port %d",
-				sensor_name, port);
+			unsigned int offset_port = (des_port / 90);
+			if (offset_port > 0)
+				pdata->suffix = port + SUFFIX_BASE + offset_port;
+			else
+				pdata->suffix = port + SUFFIX_BASE;
+			pr_info("IPU ACPI: create %s %s on mipi port %d",
+				sensor_name, pdata->suffix, port);
 		} else
 			pr_err("IPU ACPI: Invalid MIPI Port : %d", port);
 
@@ -395,7 +413,7 @@ static int set_pdata(struct ipu7_isys_subdev_info **sensor_sd,
 		pdata->ser_nlanes = lanes;
 		pdata->des_port = des_port;
 		strscpy(pdata->ser_name, (*sensor_sd)->i2c.board_info.type, I2C_NAME_SIZE);
-		set_serdes_subdev(sensor_sd, dev, &pdata, sensor_name, hid_name, lanes, addr, subdev_num);
+		set_serdes_subdev(sensor_sd, dev, &pdata, sensor_name, hid_name, lanes, addr, port, subdev_num);
 
 		(*sensor_sd)->i2c.board_info.platform_data = pdata;
 		pdata->deser_board_info = &(*sensor_sd)->i2c.board_info;
@@ -496,9 +514,13 @@ static int populate_sensor_pdata(struct device *dev,
 	}
 
 	/* Use last I2C device */
-	ret = set_pdata(sensor_sd, dev, sensor_name, hid_name, ctl_data, cam_data->link,
-		cam_data->lanes, cam_data->i2c[cam_data->i2c_num - 1].addr,
-		cam_data->pprunit, cam_data->pprval, false, connect, link_freq, cam_data->degree);
+	ret = set_pdata(sensor_sd, dev, sensor_name, hid_name, ctl_data,
+			cam_data->link,
+			cam_data->lanes,
+			cam_data->i2c[cam_data->i2c_num - 1].addr,
+			cam_data->pprunit,
+			cam_data->pprval,
+			false, connect, link_freq, cam_data->degree);
 	if (ret)
 		return ret;
 

@@ -69,6 +69,7 @@ struct serdes_subdev_info {
 	char suffix[5]; /* suffix for subdevs */
 	unsigned short ser_phys_addr;
 	unsigned int sensor_dt;
+	unsigned short aggregated_link;
 };
 
 struct serdes_module_pdata {
