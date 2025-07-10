@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (C) 2013 - 2024 Intel Corporation
+ * Copyright (C) 2013 - 2025 Intel Corporation
  */
 
 #ifndef IPU7_ISYS_CSI2_H
@@ -16,12 +16,12 @@ struct ipu7_isys;
 struct ipu7_isys_csi2_pdata;
 struct ipu7_isys_stream;
 
-#define NR_OF_CSI2_VC		16
+#define NR_OF_CSI2_VC		16U
 #define INVALID_VC_ID		-1
-#define NR_OF_CSI2_SINK_PADS	1
-#define CSI2_PAD_SINK		0
-#define NR_OF_CSI2_SRC_PADS	8
-#define CSI2_PAD_SRC		1
+#define NR_OF_CSI2_SINK_PADS	1U
+#define CSI2_PAD_SINK		0U
+#define NR_OF_CSI2_SRC_PADS	8U
+#define CSI2_PAD_SRC		1U
 #define NR_OF_CSI2_PADS		(NR_OF_CSI2_SINK_PADS + NR_OF_CSI2_SRC_PADS)
 
 #define CSI2_CSI_RX_DLY_CNT_TERMEN_CLANE_A		0
@@ -50,6 +50,7 @@ struct ipu7_isys_csi2 {
 	u32 legacy_irq_mask;
 	unsigned int nlanes;
 	unsigned int port;
+	unsigned int phy_mode;
 	unsigned int stream_count;
 };
 

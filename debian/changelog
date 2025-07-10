@@ -1,3 +1,9 @@
+ipu7-drivers (0~git202507010803.e6f86fa7-0ubuntu1) questing; urgency=medium
+
+  * New upstream 20250618_0343_217 Relese (LP: #2101850)
+
+ -- You-Sheng Yang <vicamo@gmail.com>  Thu, 10 Jul 2025 22:45:35 +0800
+
 ipu7-drivers (0~git202501150639.ffcbb112-0ubuntu1) plucky; urgency=medium
 
   * New upstream 20250108_1730_388 tag release (LP: #2100823)

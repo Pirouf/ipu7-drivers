@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (C) 2013 - 2024 Intel Corporation
+ * Copyright (C) 2013 - 2025 Intel Corporation
  */
 
 #ifndef IPU7_ISYS_VIDEO_H
@@ -17,8 +17,8 @@
 
 #include "ipu7-isys-queue.h"
 
-#define IPU_INSYS_OUTPUT_PINS		11
-#define IPU_ISYS_MAX_PARALLEL_SOF	2
+#define IPU_INSYS_OUTPUT_PINS		11U
+#define IPU_ISYS_MAX_PARALLEL_SOF	2U
 
 struct file;
 struct ipu7_isys;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2013 - 2024 Intel Corporation
+ * Copyright (C) 2013 - 2025 Intel Corporation
  */
 
 #include <linux/acpi.h>
@@ -44,14 +44,14 @@
 #define IPU_PCI_PBBAR		4
 
 #ifdef CONFIG_VIDEO_INTEL_IPU7_MGC
-static unsigned int ipu7_tpg_offsets[] = {
+static const unsigned int ipu7_tpg_offsets[] = {
 	MGC_MG_PORT(0),
 	MGC_MG_PORT(1),
 	MGC_MG_PORT(2),
 };
 #endif
 
-static unsigned int ipu7_csi_offsets[] = {
+static const unsigned int ipu7_csi_offsets[] = {
 	IPU_CSI_PORT_A_ADDR_OFFSET,
 	IPU_CSI_PORT_B_ADDR_OFFSET,
 	IPU_CSI_PORT_C_ADDR_OFFSET,
@@ -2334,12 +2334,13 @@ static int ipu7_map_fw_code_region(struct ipu7_bus_device *sys,
 	struct ipu7_bus_device *adev = to_ipu7_bus_device(dev);
 	struct sg_table *sgt = &sys->fw_sgt;
 	struct ipu7_device *isp = adev->isp;
+	struct pci_dev *pdev = isp->pdev;
 	unsigned long n_pages, i;
 	unsigned long attr = 0;
 	struct page **pages;
 	int ret;
 
-	n_pages = PHYS_PFN(PAGE_ALIGN(size));
+	n_pages = PFN_UP(size);
 
 	pages = kmalloc_array(n_pages, sizeof(*pages), GFP_KERNEL);
 	if (!pages)
@@ -2367,7 +2368,7 @@ static int ipu7_map_fw_code_region(struct ipu7_bus_device *sys,
 	if (!isp->secure_mode)
 		attr |= DMA_ATTR_RESERVE_REGION;
 
-	ret = dma_map_sgtable(dev, sgt, DMA_TO_DEVICE, attr);
+	ret = dma_map_sgtable(&pdev->dev, sgt, DMA_BIDIRECTIONAL, 0);
 	if (ret < 0) {
 		dev_err(dev, "map fw code[%lu pages %u nents] failed\n",
 			n_pages, sgt->nents);
@@ -2376,10 +2377,18 @@ static int ipu7_map_fw_code_region(struct ipu7_bus_device *sys,
 		goto out;
 	}
 
+	ret = ipu7_dma_map_sgtable(sys, sgt, DMA_BIDIRECTIONAL, attr);
+	if (ret) {
+		dma_unmap_sgtable(&pdev->dev, sgt, DMA_BIDIRECTIONAL, 0);
+		sg_free_table(sgt);
+		goto out;
+	}
+
+	ipu7_dma_sync_sgtable(sys, sgt);
+
 	dev_dbg(dev, "fw code region mapped at 0x%llx entries %d\n",
 		sgt->sgl->dma_address, sgt->nents);
 
-	dma_sync_sgtable_for_device(dev, sgt, DMA_TO_DEVICE);
 out:
 	kfree(pages);
 
@@ -2388,13 +2397,16 @@ out:
 
 static void ipu7_unmap_fw_code_region(struct ipu7_bus_device *sys)
 {
-	dma_unmap_sg(&sys->auxdev.dev, sys->fw_sgt.sgl,
-		     sys->fw_sgt.nents, DMA_TO_DEVICE);
-	sg_free_table(&sys->fw_sgt);
+	struct pci_dev *pdev = sys->isp->pdev;
+	struct sg_table *sgt = &sys->fw_sgt;
+
+	ipu7_dma_unmap_sgtable(sys, sgt, DMA_BIDIRECTIONAL, 0);
+	dma_unmap_sgtable(&pdev->dev, sgt, DMA_BIDIRECTIONAL, 0);
+	sg_free_table(sgt);
 }
 
 static int ipu7_init_fw_code_region_by_sys(struct ipu7_bus_device *sys,
-					   char *sys_name)
+					   const char *sys_name)
 {
 	struct device *dev = &sys->auxdev.dev;
 	struct ipu7_device *isp = sys->isp;
@@ -2474,7 +2486,9 @@ static int ipu7_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	struct device *dev = &pdev->dev;
 	void __iomem *isys_base = NULL;
 	void __iomem *psys_base = NULL;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
 	void __iomem *const *iomap;
+#endif
 	phys_addr_t phys, pb_phys;
 	struct ipu7_device *isp;
 	u32 is_es;
@@ -2503,6 +2517,7 @@ static int ipu7_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	dev_info(dev, "IPU7 PCI BAR0 base %llx BAR2 base %llx\n",
 		 phys, pb_phys);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
 	ret = pcim_iomap_regions(pdev, BIT(IPU_PCI_BAR) | BIT(IPU_PCI_PBBAR),
 				 pci_name(pdev));
 	if (ret)
@@ -2518,6 +2533,22 @@ static int ipu7_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	isp->pb_base = iomap[IPU_PCI_PBBAR];
 	dev_info(dev, "IPU7 PCI BAR0 mapped at %p\n BAR2 mapped at %p\n",
 		 isp->base, isp->pb_base);
+#else
+	isp->base = pcim_iomap_region(pdev, IPU_PCI_BAR, IPU_NAME);
+	if (IS_ERR(isp->base))
+		return dev_err_probe(dev, PTR_ERR(isp->base),
+				     "Failed to I/O memory remapping bar %u\n",
+				     IPU_PCI_BAR);
+
+	isp->pb_base = pcim_iomap_region(pdev, IPU_PCI_PBBAR, IPU_NAME);
+	if (IS_ERR(isp->pb_base))
+		return dev_err_probe(dev, PTR_ERR(isp->pb_base),
+				     "Failed to I/O memory remapping bar %u\n",
+				     IPU_PCI_PBBAR);
+
+	dev_info(dev, "IPU7 PCI BAR0 mapped at %p\n BAR2 mapped at %p\n",
+		 isp->base, isp->pb_base);
+#endif
 
 	pci_set_drvdata(pdev, isp);
 	pci_set_master(pdev);
@@ -2720,9 +2751,11 @@ static void ipu7_pci_remove(struct pci_dev *pdev)
 	pm_runtime_forbid(&pdev->dev);
 	pm_runtime_get_noresume(&pdev->dev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
 	pci_release_regions(pdev);
 	pci_disable_device(pdev);
 
+#endif
 	ipu_buttress_exit(isp);
 
 	release_firmware(isp->cpd_fw);

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (C) 2013 - 2024 Intel Corporation
+ * Copyright (C) 2013 - 2025 Intel Corporation
  */
 
 #ifndef IPU7_ISYS_QUEUE_H
@@ -22,9 +22,6 @@ struct ipu7_isys_queue {
 	struct vb2_queue vbq;
 	struct list_head node;
 	struct device *dev;
-	/*
-	 * @lock: serialise access to queued and pre_streamon_queued
-	 */
 	spinlock_t lock;
 	struct list_head active;
 	struct list_head incoming;
@@ -42,6 +39,7 @@ struct ipu7_isys_buffer {
 struct ipu7_isys_video_buffer {
 	struct vb2_v4l2_buffer vb_v4l2;
 	struct ipu7_isys_buffer ib;
+	dma_addr_t dma_addr;
 };
 
 #define IPU_ISYS_BUFFER_LIST_FL_INCOMING	BIT(0)
@@ -59,7 +57,7 @@ struct ipu7_isys_buffer_list {
 #define ipu7_isys_to_isys_video_buffer(__ib)			\
 	container_of(__ib, struct ipu7_isys_video_buffer, ib)
 
-#define vb2_buffer_to_ipu_isys_video_buffer(__vvb)			\
+#define vb2_buffer_to_ipu7_isys_video_buffer(__vvb)			\
 	container_of(__vvb, struct ipu7_isys_video_buffer, vb_v4l2)
 
 #define ipu7_isys_buffer_to_vb2_buffer(__ib)				\
@@ -71,10 +69,6 @@ void ipu7_isys_buffer_list_queue(struct ipu7_isys_buffer_list *bl,
 void ipu7_isys_buffer_to_fw_frame_buff(struct ipu7_insys_buffset *set,
 				       struct ipu7_isys_stream *stream,
 				       struct ipu7_isys_buffer_list *bl);
-
-void ipu7_isys_buf_calc_sequence_time(struct ipu7_isys_buffer *ib,
-				      struct ipu7_insys_resp *info);
-void ipu7_isys_queue_buf_done(struct ipu7_isys_buffer *ib);
 void ipu7_isys_queue_buf_ready(struct ipu7_isys_stream *stream,
 			       struct ipu7_insys_resp *info);
 int ipu7_isys_queue_init(struct ipu7_isys_queue *aq);
