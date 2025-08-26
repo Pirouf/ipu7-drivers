@@ -11,6 +11,8 @@
 #include <media/i2c/d4xx-max929x_pdata.h>
 #endif
 #include <media/i2c/ar0234.h>
+#include <media/i2c/lt6911uxc.h>
+#include <media/i2c/lt6911uxe.h>
 
 #define CL_EMPTY 0
 #define CL_DISCRETE 1

@@ -20,6 +20,9 @@ ifeq ($(CONFIG_VIDEO_D4XX), m)
 endif
 
 obj-$(CONFIG_VIDEO_OV02C10) += ov02c10.o
+obj-$(CONFIG_VIDEO_AR0234) += ar0234.o
+obj-$(CONFIG_VIDEO_LT6911UXC) += lt6911uxc.o
+obj-$(CONFIG_VIDEO_LT6911UXE) += lt6911uxe.o
 obj-$(CONFIG_VIDEO_ISX031) += isx031.o
 obj-$(CONFIG_VIDEO_MAX9X) += max9x/
 obj-$(CONFIG_VIDEO_D4XX_MAX9295) += d4xx-max9295.o

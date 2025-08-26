@@ -37,6 +37,8 @@
 
 
 #include <media/i2c/ar0234.h>
+#include <media/i2c/lt6911uxc.h>
+#include <media/i2c/lt6911uxe.h>
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
 #include <media/i2c/isx031.h>
 #endif
@@ -71,6 +73,8 @@ static const struct ipu_acpi_devices supported_devices[] = {
 
 	{ "INTC10C0", AR0234_NAME, get_sensor_pdata, NULL, 0, TYPE_DIRECT, NULL,
 		AR0234_I2C_ADDRESS_8BIT, 1200 },	// AR0234 HID
+	{ "INTC10B1", LT6911UXC_NAME, get_sensor_pdata, NULL, 0, TYPE_DIRECT, NULL,
+		LT6911UXC_I2C_ADDRESS, 1200 },	// LT6911UXC HID
 #if IS_ENABLED(CONFIG_VIDEO_MAX9X)
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
 	{ "INTC031M", ISX031_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, "max9x",
@@ -81,6 +85,8 @@ static const struct ipu_acpi_devices supported_devices[] = {
 	{ "INTC10CD", D457_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, D457_NAME,
 		D457_I2C_ADDRESS, 1600 },// D457 HID
 #endif
+	{ "INTC10C5", LT6911UXE_NAME, get_sensor_pdata, NULL, 0, TYPE_DIRECT, NULL,
+		LT6911UXC_I2C_ADDRESS, 1200 },   // LT6911UXE HID
 };
 
 static int get_table_index(const char *acpi_name)
@@ -103,6 +109,7 @@ static const struct acpi_device_id ipu_acpi_match[] = {
  *	{ "AR0234A", 0 },	// Custom HID
  */
 	{ "INTC10C0", 0 },	// AR0234 HID
+	{ "INTC10B1", 0 },	// LT6911UXC HID
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
 	{ "INTC1031", 0 },	// ISX031 HID
 	{ "INTC031M", 0 },	// D3CMC68N-115-084 ISX031 HID
@@ -110,6 +117,7 @@ static const struct acpi_device_id ipu_acpi_match[] = {
 #if IS_ENABLED(CONFIG_VIDEO_D4XX)
 	{ "INTC10CD", 0 },	// D457 HID
 #endif
+	{ "INTC10C5", 0 },	// LT6911UXE HID
 	{},
 };
 
