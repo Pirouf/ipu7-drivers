@@ -10,6 +10,7 @@
 #include <media/i2c/d4xx_pdata.h>
 #include <media/i2c/d4xx-max929x_pdata.h>
 #endif
+#include <media/i2c/ar0234.h>
 
 #define CL_EMPTY 0
 #define CL_DISCRETE 1
