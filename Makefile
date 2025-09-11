@@ -3,6 +3,9 @@
 
 KERNELRELEASE ?= $(shell uname -r)
 KERNEL_SRC ?= /lib/modules/$(KERNELRELEASE)/build
+KERNEL_VERSION := $(shell echo $(KERNELRELEASE) | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
+BUILD_EXCLUSIVE_KERNEL="^(6\.(1[1247])\.)"
+
 MODSRC := $(shell pwd)
 
 export EXTERNAL_BUILD = 1
@@ -14,13 +17,22 @@ obj-y += drivers/media/pci/intel/ipu7/
 obj-y += drivers/media/platform/intel/
 subdir-ccflags-y += -I$(src)/include
 
-export CONFIG_VIDEO_OV02C10 = m
+export CONFIG_VIDEO_ISX031=m
+export CONFIG_VIDEO_MAX9X=m
+
 obj-y += drivers/media/i2c/
 
+export CONFIG_INTEL_IPU7_ACPI = m
+obj-y += drivers/media/platform/intel/
+
+subdir-ccflags-y += -I$(src)/include/ \
+	-DCONFIG_VIDEO_V4L2_SUBDEV_API
 subdir-ccflags-$(CONFIG_IPU_BRIDGE) += \
 	-DCONFIG_IPU_BRIDGE
+subdir-ccflags-$(CONFIG_VIDEO_INTEL_IPU7) += \
+	-DCONFIG_DEBUG_FS -DCONFIG_VIDEO_INTEL_IPU7_ISYS_RESET
 subdir-ccflags-$(CONFIG_INTEL_IPU7_ACPI) += \
-	-DCONFIG_INTEL_IPU7_ACPI
+        -DCONFIG_INTEL_IPU7_ACPI
 
 subdir-ccflags-y += $(subdir-ccflags-m)
 
