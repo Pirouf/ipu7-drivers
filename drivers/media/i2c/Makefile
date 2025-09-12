@@ -20,7 +20,7 @@ ifeq ($(CONFIG_VIDEO_INTEL_IPU6), m)
 endif
 
 ifeq ($(CONFIG_VIDEO_D4XX), m)
-	ccflags-y += -DCONFIG_VIDEO_D4XX_SERDES
+	ccflags-y += -DCONFIG_VIDEO_D4XX_SERDES -DCONFIG_SYSFS
 endif
 
 obj-$(CONFIG_VIDEO_OV02C10) += ov02c10.o
