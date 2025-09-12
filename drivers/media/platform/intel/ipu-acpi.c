@@ -38,6 +38,10 @@
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
 #include <media/i2c/isx031.h>
 #endif
+#if IS_ENABLED(CONFIG_VIDEO_D4XX)
+#include <media/i2c/d4xx_pdata.h>
+#include <media/i2c/d4xx-max929x_pdata.h>
+#endif
 
 #include "ipu7.h"
 #include "ipu7-isys.h"
@@ -69,6 +73,10 @@ static const struct ipu_acpi_devices supported_devices[] = {
 		ISX031_I2C_ADDRESS, 1600 },	// D3 ISX031 HID
 #endif
 #endif
+#if IS_ENABLED(CONFIG_VIDEO_D4XX)
+	{ "INTC10CD", D457_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, D457_NAME,
+		D457_I2C_ADDRESS, 1600 },// D457 HID
+#endif
 };
 
 static int get_table_index(const char *acpi_name)
@@ -93,6 +101,9 @@ static const struct acpi_device_id ipu_acpi_match[] = {
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
 	{ "INTC1031", 0 },	// ISX031 HID
 	{ "INTC031M", 0 },	// D3CMC68N-115-084 ISX031 HID
+#endif
+#if IS_ENABLED(CONFIG_VIDEO_D4XX)
+	{ "INTC10CD", 0 },	// D457 HID
 #endif
 	{},
 };

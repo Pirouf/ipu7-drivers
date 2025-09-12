@@ -19,6 +19,7 @@ subdir-ccflags-y += -I$(src)/include
 
 export CONFIG_VIDEO_ISX031=m
 export CONFIG_VIDEO_MAX9X=m
+export CONFIG_VIDEO_D4XX=m
 
 obj-y += drivers/media/i2c/
 

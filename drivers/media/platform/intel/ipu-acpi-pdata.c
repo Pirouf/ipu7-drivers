@@ -312,7 +312,14 @@ static int set_serdes_subdev(struct ipu7_isys_subdev_info **serdes_sd,
 		serdes_sdinfo[i].ser_alias = serdes_info.ser_map_addr + i;
 
 		serdes_sdinfo[i].phy_i2c_addr = serdes_info.phy_i2c_addr;
-		snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c-%d",
+#if IS_ENABLED(CONFIG_VIDEO_D4XX)
+		if (!strcmp(sensor_name, D457_NAME))
+			// keep D457 legacy
+			snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c",
+				 SUFFIX_BASE + i);
+		else
+#endif
+	        snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c-%d",
 			 SUFFIX_BASE + i, port);
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
 		serdes_sdinfo[i].ser_phys_addr = 0x40;
