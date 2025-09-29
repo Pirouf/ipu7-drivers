@@ -21,7 +21,7 @@ struct ar0234_platform_data {
 	char irq_pin_name[16];
 	int reset_pin;
 	int detect_pin;
-	char suffix;
+	char suffix[5];
 	int gpios[4];
 };
 
