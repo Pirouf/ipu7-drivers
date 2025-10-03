@@ -32,7 +32,8 @@ export CONFIG_VIDEO_IMX390=m
 export CONFIG_VIDEO_MAX9X=m
 export CONFIG_VIDEO_D4XX_MAX9295 = m
 export CONFIG_VIDEO_D4XX_MAX9296 = m
-export CONFIG_VIDEO_D4XX=m
+export CONFIG_VIDEO_D4XX_MAX96724 = m
+export CONFIG_VIDEO_D4XX = m
 
 obj-y += drivers/media/i2c/
 

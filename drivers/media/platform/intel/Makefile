@@ -15,6 +15,18 @@ ifneq ($(filter y m, $(CONFIG_INTEL_IPU7_ACPI)),)
 obj-$(CONFIG_INTEL_IPU7_ACPI) += ipu-acpi.o \
                                  ipu-acpi-pdata.o \
                                  ipu-acpi-common.o
+ifeq ($(CONFIG_VIDEO_D4XX), m)
+	ccflags-y += -DCONFIG_VIDEO_D4XX
+endif
+
+ifeq ($(CONFIG_VIDEO_MAX9X), m)
+	ccflags-y += -DCONFIG_VIDEO_MAX9X
+endif
+
+CFLAGS_ipu-acpi-pdata.o += -DDEBUG
+CFLAGS_ipu-acpi-common.o += -DDEBUG
+CFLAGS_ipu-acpi.o += -DDEBUG
+
 else
 obj-y += ipu7-fpga-pdata.o
 endif
