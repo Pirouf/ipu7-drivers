@@ -2378,7 +2378,7 @@ static int ar0234_probe(struct i2c_client *client)
 		dev_err(&client->dev, "failed to init controls: %d", ret);
 		goto probe_error_v4l2_ctrl_handler_free;
 	}
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
 	if (ar0234->platform_data) {
 	    if ((ar0234->platform_data->gpios[0] != -1) && (ar0234->platform_data->irq_pin != -1)) {
 		ret = devm_gpio_request(&client->dev,
@@ -2409,6 +2409,7 @@ static int ar0234_probe(struct i2c_client *client)
 		}
 	    }
 	}
+#endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 14, 0)
 	ret = v4l2_async_register_subdev_sensor_common(&ar0234->sd);
 #else
