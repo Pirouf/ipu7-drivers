@@ -210,12 +210,13 @@ static struct max9x_pdata *pdata_ser(struct device *dev, struct max9x_subdev_pda
 {
 	struct max9x_pdata *pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 
-	dev_info(dev, "ser %s phys %02x virt %02x\n", name, phys_addr, virt_addr);
-
 	sdinfo->board_info.platform_data = pdata;
-	strscpy(sdinfo->board_info.type, name, I2C_NAME_SIZE);
+	// limit I2C_NAME_SIZE - 5 to devname = sensor name + 3 char suffix str concat error
+	strscpy(sdinfo->board_info.type, name, I2C_NAME_SIZE - 4);
 	sdinfo->board_info.addr = virt_addr;
 	sdinfo->phys_addr = pdata->phys_addr = phys_addr;
+
+	dev_info(dev, "ser %s phys %02x virt %02x\n", sdinfo->board_info.type, sdinfo->phys_addr, sdinfo->board_info.addr);
 
 	return pdata;
 }
@@ -223,11 +224,11 @@ static struct max9x_pdata *pdata_ser(struct device *dev, struct max9x_subdev_pda
 static struct max9x_pdata *pdata_sensor(struct device *dev, struct max9x_subdev_pdata *sdinfo, const char *name,
 					unsigned int phys_addr, unsigned int virt_addr)
 {
-	dev_info(dev, "sen %s phys %02x virt %02x\n", name, phys_addr, virt_addr);
-
-	strscpy(sdinfo->board_info.type, name, I2C_NAME_SIZE);
+	// limit I2C_NAME_SIZE - 5 to devname = sensor name + 3 char suffix str concat error
+	strscpy(sdinfo->board_info.type, name, I2C_NAME_SIZE - 4);
 	sdinfo->board_info.addr = virt_addr;
 	sdinfo->phys_addr = phys_addr;
+	dev_info(dev, "sen %s phys %02x virt %02x\n", sdinfo->board_info.type, sdinfo->phys_addr, sdinfo->board_info.addr);
 
 	return NULL;
 }
@@ -246,6 +247,10 @@ static struct max9x_pdata *parse_ser_pdata(struct device *dev, const char *ser_n
 	ser_pdata->num_serial_links = 1;
 	ser_pdata->serial_links = devm_kzalloc(dev, ser_pdata->num_serial_links * sizeof(*ser_pdata->serial_links),
 					       GFP_KERNEL);
+	if (!ser_pdata->serial_links) {
+		dev_err(dev, "serializer links alloc failed");
+		return NULL;
+	}
 
 	ser_serial_link = &ser_pdata->serial_links[0];
 	ser_serial_link->link_id = 0;
@@ -256,6 +261,9 @@ static struct max9x_pdata *parse_ser_pdata(struct device *dev, const char *ser_n
 	ser_pdata->num_video_pipes = 1;
 	ser_pdata->video_pipes = devm_kzalloc(dev,
 				ser_pdata->num_video_pipes * sizeof(*ser_pdata->video_pipes), GFP_KERNEL);
+	if (!ser_pdata->video_pipes) {
+		return NULL;
+	}
 
 	ser_video_pipe = &ser_pdata->video_pipes[0];
 	ser_video_pipe->serial_link_id = 0;
@@ -265,10 +273,19 @@ static struct max9x_pdata *parse_ser_pdata(struct device *dev, const char *ser_n
 	ser_video_pipe->num_data_types = 1;
 	ser_video_pipe->data_types = devm_kzalloc(dev,
 				ser_video_pipe->num_data_types * sizeof(*ser_video_pipe->data_types), GFP_KERNEL);
+	if (!ser_video_pipe->data_types) {
+		dev_err(dev, "serializer data types alloc failed");
+		return NULL;
+	}
+
 	ser_video_pipe->data_types[0] = sensor_dt;
 
 	ser_pdata->num_csi_links = 1;
 	ser_pdata->csi_links = devm_kzalloc(dev, ser_pdata->num_csi_links * sizeof(*ser_pdata->csi_links), GFP_KERNEL);
+	if (!ser_pdata->csi_links) {
+		dev_err(dev, "serializer csi Links alloc failed");
+		return NULL;
+	}
 
 	struct max9x_csi_link_pdata *csi_link = &ser_pdata->csi_links[0];
 
@@ -278,32 +295,54 @@ static struct max9x_pdata *parse_ser_pdata(struct device *dev, const char *ser_n
 	return ser_pdata;
 }
 
-static void parse_sensor_pdata(struct device *dev, const char *sensor_name, char *suffix, unsigned int ser_nlanes,
+int parse_sensor_pdata(struct device *dev, const char *sensor_name, char *suffix, unsigned int ser_nlanes,
 			       unsigned int phys_addr, unsigned int virt_addr, struct max9x_subdev_pdata *ser_sdinfo,
 			       struct max9x_pdata *ser_pdata)
 {
 	ser_pdata->num_subdevs = 1;
 	ser_pdata->subdevs = devm_kzalloc(dev, ser_pdata->num_subdevs * sizeof(*ser_pdata->subdevs), GFP_KERNEL);
-	pdata_sensor(dev, &ser_pdata->subdevs[0], sensor_name, phys_addr, virt_addr);
+	if (!ser_pdata->subdevs) {
+		dev_err(dev, "subdev alloc on serdes failed");
+		goto err_pdata;
+	}
+
+	struct max9x_subdev_pdata *sdev = &ser_pdata->subdevs[0];
+	pdata_sensor(dev, sdev, sensor_name, phys_addr, virt_addr);
+
+	struct sensor_platform_data *sen_pdata = devm_kzalloc(dev, sizeof(*sen_pdata), GFP_KERNEL);
+	if (!sen_pdata) {
+		dev_err(dev, "sensor pdata alloc failed");
+		goto err_pdata;
+	}
+        ser_pdata->subdevs[0].board_info.platform_data = sen_pdata;
+	sen_pdata->lanes = ser_nlanes;
+	sen_pdata->irq_pin_flags = 1;	//workaround for identify D3.
 
 	/* NOTE: i2c_dev_set_name() will prepend "i2c-" to this name */
 	char *dev_name = devm_kzalloc(dev, I2C_NAME_SIZE, GFP_KERNEL);
+	if (!dev_name) {
+		dev_err(dev, "sensor i2c dev name alloc failed");
+		goto err_pdata;
+	}
 
-	snprintf(dev_name, I2C_NAME_SIZE, "%s %s", sensor_name, suffix);
-	ser_pdata->subdevs[0].board_info.dev_name = dev_name;
+	dev_dbg(dev, "sen suffix : %s\n", suffix);
+	if(strnlen(suffix, I2C_NAME_SIZE) > 1)
+		snprintf(&sen_pdata->suffix, 4, "%s", suffix);
+	else
+		snprintf(&sen_pdata->suffix, 4, "%c", suffix);
 
-	struct sensor_platform_data *sen_pdata = devm_kzalloc(dev, sizeof(*sen_pdata), GFP_KERNEL);
+	snprintf(dev_name, I2C_NAME_SIZE, "%s-%s", sensor_name, &sen_pdata->suffix);
+	dev_dbg(dev, "sen i2c device namespace : %s\n", dev_name);
+	sdev->board_info.dev_name = dev_name;
 
-	if (!sen_pdata)
-		return;
+	sdev->board_info.platform_data = sen_pdata;
+	return 1;
 
-	ser_pdata->subdevs[0].board_info.platform_data = sen_pdata;
-	sen_pdata->lanes = ser_nlanes;
-	sen_pdata->irq_pin_flags = 1;	//workaround for identify D3.
-	snprintf(sen_pdata->suffix, sizeof(sen_pdata->suffix), "%s", suffix);
+ err_pdata:
+	return -ENOMEM;
 }
 
-static void *parse_serdes_pdata(struct device *dev)
+void *parse_serdes_pdata(struct device *dev)
 {
 	/*
 	 * Assumptions:
@@ -314,19 +353,36 @@ static void *parse_serdes_pdata(struct device *dev)
 	struct serdes_platform_data *serdes_pdata = dev->platform_data;
 	unsigned int num_ports = serdes_pdata->subdev_num;
 	unsigned int csi_port = (serdes_pdata->des_port / 90);
+
 	struct max9x_pdata *des_pdata = devm_kzalloc(dev, sizeof(*des_pdata), GFP_KERNEL);
+	if(!des_pdata) {
+		dev_err(dev, "deserializer PDATA alloc failed");
+		goto err_init_des;
+	}
 
 	snprintf(des_pdata->suffix, sizeof(des_pdata->suffix), "%c", serdes_pdata->suffix);
 	des_pdata->num_serial_links = num_ports;
 	des_pdata->serial_links = devm_kzalloc(dev,
 				des_pdata->num_serial_links * sizeof(*des_pdata->serial_links), GFP_KERNEL);
+	if(!des_pdata->serial_links) {
+		dev_err(dev, "deserializer links PDATA alloc failed");
+		goto err_init_des;
+	}
 
 	des_pdata->num_subdevs = num_ports;
 	des_pdata->subdevs = devm_kzalloc(dev, des_pdata->num_subdevs * sizeof(*des_pdata->subdevs), GFP_KERNEL);
+	if(!des_pdata->subdevs) {
+		dev_err(dev, "deserializer subdevs PDATA alloc failed");
+		goto err_init_des;
+	}
 
 	des_pdata->num_video_pipes = num_ports;
 	des_pdata->video_pipes = devm_kzalloc(dev,
 				des_pdata->num_video_pipes * sizeof(*des_pdata->video_pipes), GFP_KERNEL);
+	if(!des_pdata->video_pipes) {
+		dev_err(dev, "deserializer video pipes PDATA alloc failed");
+		goto err_init_des;
+	}
 
 	for (unsigned int serial_link_id = 0; serial_link_id < des_pdata->num_serial_links; serial_link_id++) {
 		struct max9x_serial_link_pdata *serial_link = &des_pdata->serial_links[serial_link_id];
@@ -342,6 +398,7 @@ static void *parse_serdes_pdata(struct device *dev)
 		unsigned int sensor_phys_addr = serdes_sdinfo->phy_i2c_addr;
 		unsigned int lanes = serdes_pdata->ser_nlanes;
 		unsigned int dt = serdes_sdinfo->sensor_dt;
+		int err = 0;
 
 		serial_link->link_id = serial_link_id;
 		serial_link->link_type = MAX9X_LINK_TYPE_GMSL2;
@@ -354,6 +411,10 @@ static void *parse_serdes_pdata(struct device *dev)
 		des_video_pipe->num_maps = 3;
 		des_video_pipe->maps = devm_kzalloc(dev,
 					des_video_pipe->num_maps * sizeof(*des_video_pipe->maps), GFP_KERNEL);
+		if(!des_video_pipe->maps) {
+			dev_err(dev, "Camera deserializer video_pipe PDATA alloc failed");
+			goto err_init_ser;
+		}
 
 		ser_sdinfo->serial_link_id = serial_link_id;
 
@@ -363,15 +424,27 @@ static void *parse_serdes_pdata(struct device *dev)
 
 		struct max9x_pdata *ser_pdata = parse_ser_pdata(dev, ser_name, serdes_sdinfo->suffix, lanes,
 								ser_phys_addr, ser_alias, ser_sdinfo, dt);
+		if(!ser_pdata) {
+			dev_err(dev, "Camera Serializer PDATA alloc failed");
+			goto err_init_ser;
+		}
 
-		parse_sensor_pdata(dev, sensor_name, serdes_sdinfo->suffix, lanes, sensor_phys_addr, sensor_alias,
+		err = parse_sensor_pdata(dev, sensor_name, serdes_sdinfo->suffix, lanes, sensor_phys_addr, sensor_alias,
 				   ser_sdinfo, ser_pdata);
+		if(err <= 0) {
+			dev_err(dev, "Camera Sensor PDATA alloc failed");
+			goto err_init_sen;
+		}
+		struct sensor_platform_data *sen_pdata = ser_pdata->subdevs[0].board_info.platform_data;
 
 	}
 
 	des_pdata->num_csi_links = 1;
 	des_pdata->csi_links = devm_kzalloc(dev, des_pdata->num_csi_links * sizeof(*des_pdata->csi_links), GFP_KERNEL);
-
+	if(!des_pdata->csi_links) {
+		dev_err(dev, "csi_links alloc failed");
+		goto err_init_csi_link;
+	}
 	do {
 		struct max9x_csi_link_pdata *csi_link = &des_pdata->csi_links[0];
 
@@ -384,6 +457,10 @@ static void *parse_serdes_pdata(struct device *dev)
 		csi_link->auto_start = false;
 		csi_link->num_maps = 2;
 		csi_link->maps = devm_kzalloc(dev, csi_link->num_maps * sizeof(*csi_link->maps), GFP_KERNEL);
+		if(!csi_link->maps) {
+			dev_err(dev, "csi_links maps alloc failed");
+			goto err_init_csi_link_map;
+		}
 		if (csi_port == 1) {
 			SET_PHY_MAP(csi_link->maps, 0, 0, 1, 0); /* 0 (DA0) -> PHY1.0 */
 			SET_PHY_MAP(csi_link->maps, 1, 1, 1, 1); /* 1 (DA1) -> PHY1.1 */
@@ -394,6 +471,13 @@ static void *parse_serdes_pdata(struct device *dev)
 	} while (0);
 
 	return des_pdata;
+
+err_init_csi_link_map:
+err_init_csi_link:
+err_init_sen:
+err_init_ser:
+err_init_des:
+	return NULL;
 }
 
 /* TODO: remap not hardcode according to pdata */
@@ -544,7 +628,7 @@ int max9x_common_resume(struct max9x_common *common)
 			goto enable_err;
 	}
 
-	dev_info(dev, "create phys dummy device");
+	dev_info(dev, "create phys dummy device phys_addr = 0x%x, virt_addr = 0x%x,", phys_addr, virt_addr);
 
 	if (phys_addr != virt_addr) {
 		common->phys_client = i2c_new_dummy_device(common->client->adapter, phys_addr);
@@ -720,8 +804,10 @@ int max9x_common_init_i2c_client(struct max9x_common *common,
 	}
 	common->muxc->priv = common;
 
-	if (common->type == MAX9X_DESERIALIZER)
+	if (common->type == MAX9X_DESERIALIZER) {
+		dev_dbg(dev, "Parsing MAX9X deserializer ACPI pdata");
 		dev->platform_data = parse_serdes_pdata(dev);
+	}
 
 	if (dev->platform_data) {
 		pdata = dev->platform_data;
@@ -729,17 +815,17 @@ int max9x_common_init_i2c_client(struct max9x_common *common,
 		dev_dbg(dev, "Parse pdata");
 
 		ret = max9x_parse_pdata(common, pdata);
-		if (ret)
+		if (ret) {
+			dev_err(dev, "Failed to initialize abstract PDATA");
 			return ret;
+		}
 	}
 
 	dev_dbg(dev, "Enable");
 
 	ret = max9x_enable(common);
-	if (ret) {
-		dev_err(dev, "Failed to enable");
-		goto enable_err;
-	}
+	if (ret)
+		dev_err(dev, "Failed to enable deserializer abstract PDATA");
 
 enable_err:
 	if (common->phys_map) {
@@ -927,6 +1013,7 @@ int max9x_enable(struct max9x_common *common)
 		usleep_range(1000, 1050);
 		gpiod_set_value_cansleep(common->reset_gpio, 0);
 	} else {
+		dev_info(dev, "Check device phys_addr = 0x%x, virt_addr = 0x%x,", phys_addr, virt_addr);
 		/* No reset_gpio, device requires soft-reset */
 		if (phys_addr == virt_addr) {
 			/* No remapping necessary */
@@ -1808,18 +1895,17 @@ static int max9x_registered(struct v4l2_subdev *sd)
 					sensor_gpios.dev_id = dev_id;
 					sensor_gpios.table[0].key = common->gpio_chip.label;
 
-					// HACK: Just make ar0234 work
-					if (!strcmp(subdev_pdata->board_info.type, "ar0234")) {
-						// set GPIOB push-pull and select pull-down
-						dev_dbg(dev, "serializer GPIO0 pull-down %s sensor RESET_BAR signal toggled (%s)...", subdev_pdata->board_info.type, dev_id);
-						regmap_write(common->map, 0x2BF, 0xa0 );
-						regmap_write(common->map, 0x2BE, 0);
-						usleep_range(10000, 10000);
-						regmap_write(common->map, 0x2BF, 0xa0 );
-						regmap_write(common->map, 0x2BE, 1 << 4);
-						//Needs to sleep for quite a while before register writes
-						usleep_range(200 * 1000, 200 * 1000 + 500);
-					}
+					// set GPIOB push-pull and select pull-down
+					dev_dbg(dev, "serializer GPIO0 pull-down %s sensor RESET_BAR signal toggled (%s)...",
+						subdev_pdata->board_info.type,
+						dev_id);
+					regmap_write(common->map, 0x2BF, 0xa0 );
+					regmap_write(common->map, 0x2BE, 0);
+					usleep_range(10000, 10000);
+					regmap_write(common->map, 0x2BF, 0xa0 );
+					regmap_write(common->map, 0x2BE, 1 << 4);
+					//Needs to sleep for quite a while before register writes
+					usleep_range(200 * 1000, 200 * 1000 + 500);
 
 					gpiod_add_lookup_table(&sensor_gpios);
 
