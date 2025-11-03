@@ -97,6 +97,10 @@ struct ipu7_isys_video {
 	unsigned int skipframe;
 	unsigned int start_streaming;
 #endif
+#ifdef CONFIG_VIDEO_INTEL_IPU7_EXT_CTRLS
+	struct v4l2_ctrl_handler ctrl_handler;
+	unsigned int enum_link_state; /* state for link enumeration by vc */
+#endif
 };
 
 #define ipu7_isys_queue_to_video(__aq)			\
