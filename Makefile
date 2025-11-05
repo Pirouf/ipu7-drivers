@@ -37,7 +37,7 @@ export CONFIG_VIDEO_D4XX = m
 
 obj-y += drivers/media/i2c/
 
-export CONFIG_INTEL_IPU7_ACPI = m
+export CONFIG_INTEL_IPU_ACPI = m
 obj-y += drivers/media/platform/intel/
 
 subdir-ccflags-y += -I$(src)/include/ \
@@ -48,8 +48,8 @@ subdir-ccflags-$(CONFIG_VIDEO_INTEL_IPU7) += \
 	-DCONFIG_DEBUG_FS -DCONFIG_VIDEO_INTEL_IPU7_ISYS_RESET
 subdir-ccflags-$(CONFIG_VIDEO_INTEL_IPU7_EXT_CTRLS) += \
         -DCONFIG_VIDEO_INTEL_IPU7_EXT_CTRLS
-subdir-ccflags-$(CONFIG_INTEL_IPU7_ACPI) += \
-        -DCONFIG_INTEL_IPU7_ACPI
+subdir-ccflags-$(CONFIG_INTEL_IPU_ACPI) += \
+        -DCONFIG_INTEL_IPU_ACPI
 
 subdir-ccflags-y += $(subdir-ccflags-m)
 

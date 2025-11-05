@@ -12,7 +12,6 @@
  * GNU General Public License for more details.
  *
  */
-
 #include <media/ipu-acpi.h>
 #include <media/ipu-acpi-pdata.h>
 
@@ -20,11 +19,25 @@
 #define MIN_SERDES_I2C 3
 #define SUFFIX_BASE 97
 #define SUFFIX_BASE_OFFSET 5 // SERDES aggregated-link offset
+#define MSG_LEN 128
 
-struct ipu7_isys_subdev_pdata acpi_subdev_pdata = {
-	.subdevs = (struct ipu7_isys_subdev_info *[]) {
-		NULL,
-	}
+static struct ipu_isys_subdev_pdata *ptr_built_in_pdata;
+
+void set_built_in_pdata(struct ipu_isys_subdev_pdata *pdata)
+{
+	ptr_built_in_pdata = pdata;
+};
+EXPORT_SYMBOL(set_built_in_pdata);
+
+static struct ipu_isys_clk_mapping clk_mapping[] = {
+	{ CLKDEV_INIT(NULL, NULL, NULL), NULL }
+};
+
+struct ipu_isys_subdev_pdata acpi_subdev_pdata = {
+	.subdevs = (struct ipu_isys_subdev_info *[]) {
+		NULL, NULL, NULL, NULL, NULL,
+	},
+	.clk_map = clk_mapping,
 };
 
 struct serdes_local serdes_info;
@@ -75,7 +88,8 @@ static int get_i2c_bus_id(int adapter_id, char *adapter_bdf, int bdf_len)
  */
 static void update_i2c_bus_id(void)
 {
-	struct ipu7_isys_subdev_info **subdevs = acpi_subdev_pdata.subdevs;
+	struct ipu_isys_subdev_info **subdevs = acpi_subdev_pdata.subdevs;
+
 	for (int i = 0; subdevs[i] != NULL; i++) {
 		subdevs[i]->i2c.i2c_adapter_id =
 			get_i2c_bus_id(subdevs[i]->i2c.i2c_adapter_id,
@@ -84,9 +98,9 @@ static void update_i2c_bus_id(void)
 	}
 }
 
-struct ipu7_isys_subdev_pdata *get_acpi_subdev_pdata(void)
+struct ipu_isys_subdev_pdata *get_acpi_subdev_pdata(void)
 {
-	struct ipu7_isys_subdev_pdata *ptr;
+	struct ipu_isys_subdev_pdata *ptr;
 
 	update_i2c_bus_id();
 	ptr = &acpi_subdev_pdata;
@@ -124,7 +138,7 @@ static void print_serdes_sdinfo(struct serdes_subdev_info *sdinfo)
 				(int)sd_mpdata->gpio_powerup_seq[i]);
 }
 
-static void print_serdes_subdev(struct ipu7_isys_subdev_info *sd)
+static void print_serdes_subdev(struct ipu_isys_subdev_info *sd)
 {
 	struct serdes_platform_data *sd_pdata = sd->i2c.board_info.platform_data;
 	int i;
@@ -155,6 +169,7 @@ static void print_serdes_subdev(struct ipu7_isys_subdev_info *sd)
 	pr_debug("\t\tlink_freq_mbps \t\t= %d", sd_pdata->link_freq_mbps);
 	pr_debug("\t\tdeser_nlanes \t\t= %d", sd_pdata->deser_nlanes);
 	pr_debug("\t\tser_nlanes \t\t= %d", sd_pdata->ser_nlanes);
+	pr_debug("\t\tser_name \t\t= %s", sd_pdata->ser_name);
 
 	for (i = 0; i < serdes_info.rx_port; i++) {
 		sd_sdinfo = &sd_pdata->subdev_info[i];
@@ -169,7 +184,7 @@ static void print_serdes_subdev(struct ipu7_isys_subdev_info *sd)
 
 }
 
-static void print_subdev(struct ipu7_isys_subdev_info *sd)
+static void print_subdev(struct ipu_isys_subdev_info *sd)
 {
 	struct sensor_platform_data *spdata = sd->i2c.board_info.platform_data;
 	int i;
@@ -200,7 +215,7 @@ static void print_subdev(struct ipu7_isys_subdev_info *sd)
 	pr_debug("\t\treset_pin \t\t= %d", spdata->reset_pin);
 	pr_debug("\t\tdetect_pin \t\t= %d", spdata->detect_pin);
 
-	for (i = 0; i < IPU7_SPDATA_GPIO_NUM; i++)
+	for (i = 0; i < IPU_SPDATA_GPIO_NUM; i++)
 		pr_debug("\t\tgpios[%d] \t\t= %d", i, spdata->gpios[i]);
 }
 
@@ -228,11 +243,11 @@ static void set_common_gpio(struct control_logic_data *ctl_data,
 					ctl_data->gpio[i].func);
 }
 
-static int set_csi2(struct ipu7_isys_subdev_info **sensor_sd,
+static int set_csi2(struct ipu_isys_subdev_info **sensor_sd,
 		    unsigned int lanes, unsigned int port,
 		    unsigned int bus_type)
 {
-	struct ipu7_isys_csi2_config *csi2_config;
+	struct ipu_isys_csi2_config *csi2_config;
 
 	csi2_config = kzalloc(sizeof(*csi2_config), GFP_KERNEL);
 	if (!csi2_config)
@@ -252,7 +267,7 @@ static int set_csi2(struct ipu7_isys_subdev_info **sensor_sd,
 	return 0;
 }
 
-static void set_i2c(struct ipu7_isys_subdev_info **sensor_sd,
+static void set_i2c(struct ipu_isys_subdev_info **sensor_sd,
 		struct device *dev,
 		const char *sensor_name,
 		unsigned int addr,
@@ -276,7 +291,7 @@ static void set_serdes_sd_pdata(struct serdes_module_pdata **module_pdata,
 
 #define PORT_NR 8
 
-static int set_serdes_subdev(struct ipu7_isys_subdev_info **serdes_sd,
+static int set_serdes_subdev(struct ipu_isys_subdev_info **serdes_sd,
 		struct device *dev,
 		struct serdes_platform_data **pdata,
 		const char *sensor_name,
@@ -309,6 +324,7 @@ static int set_serdes_subdev(struct ipu7_isys_subdev_info **serdes_sd,
 		/* board info */
 		strscpy(serdes_sdinfo[i].board_info.type, sensor_name, I2C_NAME_SIZE);
 		serdes_sdinfo[i].board_info.addr = serdes_info.sensor_map_addr + i;
+
 		serdes_sdinfo[i].board_info.platform_data = module_pdata[i];
 
 		/* serdes_subdev_info */
@@ -352,7 +368,7 @@ static int set_serdes_subdev(struct ipu7_isys_subdev_info **serdes_sd,
 	return 0;
 }
 
-static int set_pdata(struct ipu7_isys_subdev_info **sensor_sd,
+static int set_pdata(struct ipu_isys_subdev_info **sensor_sd,
 		struct device *dev,
 		const char *sensor_name,
 		const char *hid_name,
@@ -456,7 +472,7 @@ static void set_serdes_info(struct device *dev, const char *sensor_name,
 }
 
 static int populate_sensor_pdata(struct device *dev,
-			struct ipu7_isys_subdev_info **sensor_sd,
+			struct ipu_isys_subdev_info **sensor_sd,
 			struct sensor_bios_data *cam_data,
 			struct control_logic_data *ctl_data,
 			enum connection_type connect,
@@ -466,7 +482,7 @@ static int populate_sensor_pdata(struct device *dev,
 			int sensor_physical_addr,
 			int link_freq)
 {
-	struct ipu7_isys_subdev_pdata *ptr_acpi_subdev_pdata = &acpi_subdev_pdata;
+	struct ipu_isys_subdev_pdata *ptr_acpi_subdev_pdata = &acpi_subdev_pdata;
 	int i = 0;
 	int ret;
 
@@ -486,6 +502,7 @@ static int populate_sensor_pdata(struct device *dev,
 				cam_data->i2c_num);
 			return -1;
 		}
+
 		/* Others use DISCRETE Control Logic */
 		if (ctl_data->type != CL_DISCRETE) {
 			dev_err(dev, "IPU ACPI: Control Logic Type\n");
@@ -567,12 +584,13 @@ int get_sensor_pdata(struct device *dev,
 {
 	struct sensor_bios_data *cam_data;
 	struct control_logic_data *ctl_data;
-	struct ipu7_isys_subdev_info *sensor_sd;
+	struct ipu_isys_subdev_info *sensor_sd;
 	int rval;
 
 	cam_data = kzalloc(sizeof(*cam_data), GFP_KERNEL);
 	if (!cam_data)
 		return -ENOMEM;
+
 	cam_data->dev = dev;
 
 	ctl_data = kzalloc(sizeof(*ctl_data), GFP_KERNEL);
@@ -580,6 +598,7 @@ int get_sensor_pdata(struct device *dev,
 		kfree(cam_data);
 		return -ENOMEM;
 	}
+
 	ctl_data->dev = dev;
 
 	sensor_sd = kzalloc(sizeof(*sensor_sd), GFP_KERNEL);
