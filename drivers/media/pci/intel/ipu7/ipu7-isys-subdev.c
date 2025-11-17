@@ -19,6 +19,7 @@
 #include "ipu7-isys.h"
 #include "ipu7-isys-subdev.h"
 
+
 unsigned int ipu7_isys_mbus_code_to_mipi(u32 code)
 {
 	switch (code) {
@@ -30,6 +31,7 @@ unsigned int ipu7_isys_mbus_code_to_mipi(u32 code)
 		return MIPI_CSI2_DT_YUV422_10B;
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 	case MEDIA_BUS_FMT_YUYV8_1X16:
+	case MEDIA_BUS_FMT_VYUY8_1X16:
 		return MIPI_CSI2_DT_YUV422_8B;
 	case MEDIA_BUS_FMT_SBGGR12_1X12:
 	case MEDIA_BUS_FMT_SGBRG12_1X12:
@@ -42,6 +44,7 @@ unsigned int ipu7_isys_mbus_code_to_mipi(u32 code)
 	case MEDIA_BUS_FMT_SGRBG10_1X10:
 	case MEDIA_BUS_FMT_SRGGB10_1X10:
 		return MIPI_CSI2_DT_RAW10;
+	case MEDIA_BUS_FMT_Y8_1X8:
 	case MEDIA_BUS_FMT_SBGGR8_1X8:
 	case MEDIA_BUS_FMT_SGBRG8_1X8:
 	case MEDIA_BUS_FMT_SGRBG8_1X8:
