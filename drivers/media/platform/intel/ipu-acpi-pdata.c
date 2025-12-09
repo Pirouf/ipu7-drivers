@@ -319,16 +319,21 @@ static int set_serdes_subdev(struct ipu7_isys_subdev_info **serdes_sd,
 #if IS_ENABLED(CONFIG_VIDEO_D4XX)
 		/* define namespacing offset (suffix e -> a-4), for :
 		/*   - pprunit > 1, set # of deserializer aggregated-link  */
-		if ( (*pdata)->suffix > port + SUFFIX_BASE) {
-			serdes_sdinfo[i].aggregated_link = (*pdata)->suffix - (port + SUFFIX_BASE);
+		if ( i > 0)
 			pr_info("IPU ACPI: Add namespacing %s, on aggregated-link sensors %d",
 				sensor_name,
 				serdes_info.deser_num);
-		} else {
-			serdes_sdinfo[i].aggregated_link = 0;
+
+		/*   - degree == 90|180|270, offset deserializer source link  */
+		if ( (*pdata)->des_port > 0) {
+			pr_info("IPU ACPI: Add namespacing %s on offset sensors %d",
+				sensor_name,
+				serdes_info.deser_num);
 		}
 	        snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c-%d",
-			 SUFFIX_BASE + i + serdes_sdinfo[i].aggregated_link , port);
+			 SUFFIX_BASE + i + (*pdata)->des_port , port);
+
+		serdes_sdinfo[i].aggregated_link = (*pdata)->des_port;
 #else
 	        snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c-%d",
 			 SUFFIX_BASE + i, port);
@@ -360,7 +365,7 @@ static int set_pdata(struct ipu7_isys_subdev_info **sensor_sd,
 		bool is_dummy,
 		enum connection_type connect,
 		int link_freq,
-		int des_port)
+		unsigned int degree)
 {
 	if (connect == TYPE_DIRECT) {
 		struct sensor_platform_data *pdata;
@@ -389,6 +394,7 @@ static int set_pdata(struct ipu7_isys_subdev_info **sensor_sd,
 		(*sensor_sd)->i2c.board_info.platform_data = pdata;
 	} else if (connect == TYPE_SERDES) {
 		struct serdes_platform_data *pdata;
+		unsigned int des_port = 0;
 
 		pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
 		if (!pdata)
@@ -397,11 +403,13 @@ static int set_pdata(struct ipu7_isys_subdev_info **sensor_sd,
 		pr_debug("IPU ACPI: %s - Serdes connection", __func__);
 		/* use ascii */
 		if (port >= 0) {
-			unsigned int offset_port = (des_port / 90);
-			if (offset_port > 0)
-				pdata->suffix = port + SUFFIX_BASE + offset_port;
-			else
-				pdata->suffix = port + SUFFIX_BASE;
+			if (degree == 90 ||
+			    degree == 180 ||
+			    degree == 14) // 14 is equal to 270 (e.g. 255 byte overflow + 15)
+				des_port = (degree == 14) ? 3 :(degree / 90);
+
+			pdata->suffix = port + SUFFIX_BASE;
+
 			pr_info("IPU ACPI: create %s %s on mipi port %d",
 				sensor_name, pdata->suffix, port);
 		} else
