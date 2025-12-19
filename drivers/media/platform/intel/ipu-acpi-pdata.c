@@ -629,3 +629,4 @@ EXPORT_SYMBOL(get_sensor_pdata);
 MODULE_AUTHOR("Khai Wen, Ng <khai.wen.ng@intel.com>");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("IPU ACPI support");
+MODULE_VERSION(DRIVER_VERSION_SUFFIX);

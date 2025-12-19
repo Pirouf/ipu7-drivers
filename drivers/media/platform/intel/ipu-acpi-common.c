@@ -446,3 +446,4 @@ MODULE_AUTHOR("Samu Onkalo <samu.onkalo@intel.com>");
 MODULE_AUTHOR("Khai Wen Ng <khai.wen.ng@intel.com>");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("IPU ACPI support");
+MODULE_VERSION(DRIVER_VERSION_SUFFIX);

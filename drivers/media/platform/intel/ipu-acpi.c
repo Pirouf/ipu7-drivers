@@ -272,3 +272,4 @@ module_exit(ipu_acpi_exit);
 MODULE_AUTHOR("Samu Onkalo <samu.onkalo@intel.com>");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("IPU ACPI support");
+MODULE_VERSION(DRIVER_VERSION_SUFFIX);
