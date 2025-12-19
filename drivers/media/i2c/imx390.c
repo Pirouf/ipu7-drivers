@@ -2206,3 +2206,4 @@ module_i2c_driver(imx390_i2c_driver);
 MODULE_AUTHOR("Chang, Ying <ying.chang@intel.com>");
 MODULE_DESCRIPTION("imx390 sensor driver");
 MODULE_LICENSE("GPL v2");
+MODULE_VERSION(DRIVER_VERSION_SUFFIX);
