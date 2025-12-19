@@ -2473,3 +2473,4 @@ module_i2c_driver(ar0234_i2c_driver);
 MODULE_AUTHOR("Chang, Ying <ying.chang@intel.com>");
 MODULE_DESCRIPTION("ar0234 sensor driver");
 MODULE_LICENSE("GPL v2");
+MODULE_VERSION(DRIVER_VERSION_SUFFIX);
