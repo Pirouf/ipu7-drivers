@@ -12,7 +12,11 @@ ccflags-y += -I$(srcpath)/$(src)/../../../include/
 ccflags-y += -I$(srcpath)/$(src)/../../../drivers/media/pci/intel/ipu7
 
 ifeq ($(CONFIG_VIDEO_INTEL_IPU7), m)
-	ccflags-y += -DCONFIG_VIDEO_INTEL_IPU7=1
+	ccflags-y += -DCONFIG_VIDEO_INTEL_IPU7=1 -DCONFIG_VIDEO_MAX9X
+endif
+
+ifeq ($(CONFIG_VIDEO_INTEL_IPU6), m)
+	ccflags-y += -DCONFIG_VIDEO_INTEL_IPU6=1
 endif
 
 ifeq ($(CONFIG_VIDEO_D4XX), m)

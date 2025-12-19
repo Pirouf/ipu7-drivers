@@ -2891,3 +2891,4 @@ MODULE_AUTHOR("Qingwu Zhang <qingwu.zhang@intel.com>");
 MODULE_AUTHOR("Intel");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Intel ipu7 pci driver");
+MODULE_VERSION(DRIVER_VERSION_SUFFIX);

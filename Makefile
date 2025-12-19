@@ -8,6 +8,8 @@ BUILD_EXCLUSIVE_KERNEL="^(6\.(1[1247])\.)"
 
 MODSRC := $(shell pwd)
 
+subdir-ccflags-y += -DDRIVER_VERSION_SUFFIX=\"${DRIVER_VERSION_SUFFIX}\"
+
 export EXTERNAL_BUILD = 1
 export CONFIG_VIDEO_INTEL_IPU7 = m
 export CONFIG_VIDEO_INTEL_IPU6 = m
