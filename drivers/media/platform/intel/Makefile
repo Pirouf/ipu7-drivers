@@ -8,7 +8,8 @@ src := $(srctree)/$(src)
 endif
 endif
 
-ccflags-y += -I$(src)/../../pci/intel/ipu7/
+# ipu7-dkms appendix
+CC := ${CC} -I$(src)/../../../../include -I$(src)/../../pci/intel/ipu7/
 
 ifneq ($(filter y m, $(CONFIG_INTEL_IPU7_ACPI)),)
 obj-$(CONFIG_INTEL_IPU7_ACPI) += ipu-acpi.o \
