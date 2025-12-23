@@ -1,0 +1,167 @@
+From ffffc2b7f4db130c211d2460abf67402c5693d5f Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Fri, 12 Sep 2025 08:50:20 -0700
+Subject: [PATCH 10/62] acpi-pdata : register d4xx ACPI PDATA
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ Makefile                                      |  1 +
+ drivers/media/platform/intel/ipu-acpi-pdata.c |  9 ++++-
+ drivers/media/platform/intel/ipu-acpi.c       | 11 +++++++
+ include/media/i2c/d4xx-max929x_pdata.h        | 19 +++++++++++
+ include/media/i2c/d4xx_pdata.h                | 33 +++++++++++++++++++
+ include/media/ipu-acpi-pdata.h                |  4 +++
+ 6 files changed, 76 insertions(+), 1 deletion(-)
+ create mode 100644 include/media/i2c/d4xx-max929x_pdata.h
+ create mode 100644 include/media/i2c/d4xx_pdata.h
+
+diff --git a/Makefile b/Makefile
+index 15bc2d153..b734eec24 100644
+--- a/Makefile
++++ b/Makefile
+@@ -19,6 +19,7 @@ subdir-ccflags-y += -I$(src)/include
+ 
+ export CONFIG_VIDEO_ISX031=m
+ export CONFIG_VIDEO_MAX9X=m
++export CONFIG_VIDEO_D4XX=m
+ 
+ obj-y += drivers/media/i2c/
+ 
+diff --git a/drivers/media/platform/intel/ipu-acpi-pdata.c b/drivers/media/platform/intel/ipu-acpi-pdata.c
+index 0a84dccf9..a9497c530 100644
+--- a/drivers/media/platform/intel/ipu-acpi-pdata.c
++++ b/drivers/media/platform/intel/ipu-acpi-pdata.c
+@@ -312,7 +312,14 @@ static int set_serdes_subdev(struct ipu7_isys_subdev_info **serdes_sd,
+ 		serdes_sdinfo[i].ser_alias = serdes_info.ser_map_addr + i;
+ 
+ 		serdes_sdinfo[i].phy_i2c_addr = serdes_info.phy_i2c_addr;
+-		snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c-%d",
++#if IS_ENABLED(CONFIG_VIDEO_D4XX)
++		if (!strcmp(sensor_name, D457_NAME))
++			// keep D457 legacy
++			snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c",
++				 SUFFIX_BASE + i);
++		else
++#endif
++	        snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c-%d",
+ 			 SUFFIX_BASE + i, port);
+ #if IS_ENABLED(CONFIG_VIDEO_ISX031)
+ 		serdes_sdinfo[i].ser_phys_addr = 0x40;
+diff --git a/drivers/media/platform/intel/ipu-acpi.c b/drivers/media/platform/intel/ipu-acpi.c
+index deed3bba5..b9232a38a 100644
+--- a/drivers/media/platform/intel/ipu-acpi.c
++++ b/drivers/media/platform/intel/ipu-acpi.c
+@@ -38,6 +38,10 @@
+ #if IS_ENABLED(CONFIG_VIDEO_ISX031)
+ #include <media/i2c/isx031.h>
+ #endif
++#if IS_ENABLED(CONFIG_VIDEO_D4XX)
++#include <media/i2c/d4xx_pdata.h>
++#include <media/i2c/d4xx-max929x_pdata.h>
++#endif
+ 
+ #include "ipu7.h"
+ #include "ipu7-isys.h"
+@@ -69,6 +73,10 @@ static const struct ipu_acpi_devices supported_devices[] = {
+ 		ISX031_I2C_ADDRESS, 1600 },	// D3 ISX031 HID
+ #endif
+ #endif
++#if IS_ENABLED(CONFIG_VIDEO_D4XX)
++	{ "INTC10CD", D457_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, D457_NAME,
++		D457_I2C_ADDRESS, 1600 },// D457 HID
++#endif
+ };
+ 
+ static int get_table_index(const char *acpi_name)
+@@ -93,6 +101,9 @@ static const struct acpi_device_id ipu_acpi_match[] = {
+ #if IS_ENABLED(CONFIG_VIDEO_ISX031)
+ 	{ "INTC1031", 0 },	// ISX031 HID
+ 	{ "INTC031M", 0 },	// D3CMC68N-115-084 ISX031 HID
++#endif
++#if IS_ENABLED(CONFIG_VIDEO_D4XX)
++	{ "INTC10CD", 0 },	// D457 HID
+ #endif
+ 	{},
+ };
+diff --git a/include/media/i2c/d4xx-max929x_pdata.h b/include/media/i2c/d4xx-max929x_pdata.h
+new file mode 100644
+index 000000000..89a866414
+--- /dev/null
++++ b/include/media/i2c/d4xx-max929x_pdata.h
+@@ -0,0 +1,19 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/* Copyright (C) 2024 Intel Corporation */
++
++#ifndef MAX929X_H
++#define MAX929X_H
++
++#define MAX929X_NAME "max929x"
++#define MAX9295_I2C_ADDRESS 0x40
++
++/* set this flag if this module needs serializer initialization */
++#define MAX9295_FL_INIT_SER	BIT(0)
++/* set this flag if this module has extra powerup sequence */
++#define MAX9295_FL_POWERUP	BIT(1)
++/* set this flag if this module needs reset signal */
++#define MAX9295_FL_RESET	BIT(2)
++/* set this flag if it need to init serial clk only */
++#define MAX9295_FL_INIT_SER_CLK	BIT(4)
++
++#endif
+diff --git a/include/media/i2c/d4xx_pdata.h b/include/media/i2c/d4xx_pdata.h
+new file mode 100644
+index 000000000..7f6037d08
+--- /dev/null
++++ b/include/media/i2c/d4xx_pdata.h
+@@ -0,0 +1,33 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/* Copyright (C) 2022 Intel Corporation */
++
++#ifndef D457_H
++#define D457_H
++
++#define D457_NAME "d4xx"
++#define MAX9296_NAME "MAX9296"
++
++#define D457_I2C_ADDRESS 0x10
++
++struct d4xx_subdev_info {
++	struct i2c_board_info board_info;
++	int i2c_adapter_id;
++	unsigned short rx_port;
++	unsigned short phy_i2c_addr;
++	unsigned short ser_alias;
++	char suffix[5]; /* suffix for subdevs */
++	int aggregated_link;
++};
++
++struct d4xx_pdata {
++	unsigned int subdev_num;
++	struct d4xx_subdev_info *subdev_info;
++	unsigned int reset_gpio;
++	int FPD_gpio;
++	const char suffix;
++	unsigned int link_freq_mbps;
++	unsigned int deser_nlanes;
++	unsigned int ser_nlanes;
++	struct i2c_board_info *deser_board_info;
++};
++#endif
+diff --git a/include/media/ipu-acpi-pdata.h b/include/media/ipu-acpi-pdata.h
+index e2074419d..4748fcf3e 100644
+--- a/include/media/ipu-acpi-pdata.h
++++ b/include/media/ipu-acpi-pdata.h
+@@ -6,6 +6,10 @@
+ #if IS_ENABLED(CONFIG_VIDEO_ISX031)
+ #include <media/i2c/isx031.h>
+ #endif
++#if IS_ENABLED(CONFIG_VIDEO_D4XX)
++#include <media/i2c/d4xx_pdata.h>
++#include <media/i2c/d4xx-max929x_pdata.h>
++#endif
+ 
+ #define CL_EMPTY 0
+ #define CL_DISCRETE 1
+-- 
+2.25.1
+

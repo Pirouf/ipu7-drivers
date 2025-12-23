@@ -1,0 +1,28 @@
+From 28082368bdb3e51666e33ecc46af1cbe8e5eae53 Mon Sep 17 00:00:00 2001
+From: Florent Pirou <florent.pirou@intel.com>
+Date: Mon, 30 Sep 2024 17:43:17 +0200
+Subject: [PATCH 24/62] d4xx: avoid G_FMT error on missing Y210
+
+Signed-off-by: Florent Pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/d4xx.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/media/i2c/d4xx.c b/drivers/media/i2c/d4xx.c
+index 0c091ccc0..7cfbcdd8b 100644
+--- a/drivers/media/i2c/d4xx.c
++++ b/drivers/media/i2c/d4xx.c
+@@ -1340,8 +1340,10 @@ static unsigned int mbus_code_to_mipi(u32 code)
+ 		return MIPI_CSI2_TYPE_RGB565;
+ 	case MEDIA_BUS_FMT_RGB888_1X24:
+ 		return MIPI_CSI2_TYPE_RGB888;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+ 	case MEDIA_BUS_FMT_YUYV10_1X20:
+ 		return MIPI_CSI2_TYPE_YUV422_10;
++#endif
+ 	case MEDIA_BUS_FMT_UYVY8_1X16:
+ 	case MEDIA_BUS_FMT_YUYV8_1X16:
+ 	case MEDIA_BUS_FMT_VYUY8_1X16:
+-- 
+2.25.1
+

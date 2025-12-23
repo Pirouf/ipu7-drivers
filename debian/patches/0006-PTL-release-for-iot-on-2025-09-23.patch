@@ -1,0 +1,4089 @@
+From b8d6138b3c444a2ffed3fe0e608567ea769988d6 Mon Sep 17 00:00:00 2001
+From: Hao Yao <hao.yao@intel.com>
+Date: Sun, 28 Sep 2025 17:33:28 +0800
+Subject: [PATCH 06/62] PTL release for iot on 2025-09-23
+
+Signed-off-by: Hao Yao <hao.yao@intel.com>
+---
+ .../pci/intel/ipu7/abi/ipu7_fw_boot_abi.h     |   11 -
+ .../pci/intel/ipu7/abi/ipu7_fw_common_abi.h   |   69 -
+ .../pci/intel/ipu7/abi/ipu7_fw_isys_abi.h     |   95 +-
+ .../pci/intel/ipu7/abi/ipu7_fw_msg_abi.h      |   45 -
+ .../pci/intel/ipu7/abi/ipu7_fw_syscom_abi.h   |   11 -
+ drivers/media/pci/intel/ipu7/ipu7-boot.c      |    9 +-
+ .../media/pci/intel/ipu7/ipu7-buttress-regs.h |   10 +-
+ .../media/pci/intel/ipu7/ipu7-isys-csi-phy.c  |  144 +-
+ .../pci/intel/ipu7/ipu7-isys-csi2-regs.h      | 2052 ++++++++---------
+ drivers/media/pci/intel/ipu7/ipu7-isys-csi2.c |   85 +-
+ drivers/media/pci/intel/ipu7/ipu7-isys-csi2.h |   27 +-
+ .../media/pci/intel/ipu7/ipu7-isys-queue.c    |   10 +-
+ .../media/pci/intel/ipu7/ipu7-isys-subdev.c   |   35 +-
+ .../media/pci/intel/ipu7/ipu7-isys-subdev.h   |    2 -
+ drivers/media/pci/intel/ipu7/ipu7-isys-tpg.c  |   42 +-
+ .../media/pci/intel/ipu7/ipu7-isys-video.c    |    2 +
+ drivers/media/pci/intel/ipu7/ipu7-isys.c      |   16 +-
+ drivers/media/pci/intel/ipu7/ipu7-mmu.h       |    4 +-
+ .../media/pci/intel/ipu7/ipu7-platform-regs.h |   64 -
+ drivers/media/pci/intel/ipu7/ipu7.c           |   18 +-
+ ...-set-snoop-1-to-fix-cache-line-issue.patch |   27 +
+ .../0002-INT3472-Support-LT6911GXD.patch      |   58 +
+ ...-media-i2c-add-support-for-lt6911gxd.patch |   47 +
+ ...a-pci-enable-lt6911gxd-in-ipu-bridge.patch |   26 +
+ .../0005-ipu-bridge-add-CPHY-support.patch    |  110 +
+ ...nc-at-buffer_prepare-callback-as-DMA.patch |   43 +
+ ...pu7-remove-from-the-Makefile-Kconfig.patch |   38 +
+ ...-enable-ipu7-in-the-Makefile-Kconfig.patch |   35 +
+ ...max9x-add-config-in-makefile-kconfig.patch |   54 +
+ ...t-v4l2_subdev_enable_streams_api-tru.patch |   27 +
+ 30 files changed, 1697 insertions(+), 1519 deletions(-)
+ create mode 100644 patch/v6.17_iot/0001-media-pci-set-snoop-1-to-fix-cache-line-issue.patch
+ create mode 100644 patch/v6.17_iot/0002-INT3472-Support-LT6911GXD.patch
+ create mode 100644 patch/v6.17_iot/0003-media-i2c-add-support-for-lt6911gxd.patch
+ create mode 100644 patch/v6.17_iot/0004-media-pci-enable-lt6911gxd-in-ipu-bridge.patch
+ create mode 100644 patch/v6.17_iot/0005-ipu-bridge-add-CPHY-support.patch
+ create mode 100644 patch/v6.17_iot/0006-media-ipu-Dma-sync-at-buffer_prepare-callback-as-DMA.patch
+ create mode 100644 patch/v6.17_iot/0007-staging-media-ipu7-remove-from-the-Makefile-Kconfig.patch
+ create mode 100644 patch/v6.17_iot/0008-media-pci-enable-ipu7-in-the-Makefile-Kconfig.patch
+ create mode 100644 patch/v6.17_iot/0009-max9x-add-config-in-makefile-kconfig.patch
+ create mode 100644 patch/v6.17_iot/0010-drivers-media-set-v4l2_subdev_enable_streams_api-tru.patch
+
+diff --git a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_boot_abi.h b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_boot_abi.h
+index 4221ebb18..a1519c4fe 100644
+--- a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_boot_abi.h
++++ b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_boot_abi.h
+@@ -33,11 +33,6 @@ struct ia_gofo_logger_config {
+ 	u32 hw_printf_buffer_size_bytes;
+ };
+ 
+-static inline void ia_gofo_logger_config_abi_test_func(void)
+-{
+-	CHECK_ALIGN32(struct ia_gofo_logger_config);
+-}
+-
+ #pragma pack(push, 1)
+ 
+ #define IA_GOFO_BUTTRESS_FW_BOOT_PARAMS_MAX_REG_IDX_PER_APP \
+@@ -109,12 +104,6 @@ struct ia_gofo_secondary_boot_config {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ia_gofo_boot_config_abi_test_func(void)
+-{
+-	CHECK_ALIGN32(struct ia_gofo_boot_config);
+-	CHECK_ALIGN32(struct ia_gofo_secondary_boot_config);
+-}
+-
+ #define IA_GOFO_WDT_TIMEOUT_ERR			0xdead0401U
+ #define IA_GOFO_MEM_FATAL_DME_ERR		0xdead0801U
+ #define IA_GOFO_MEM_UNCORRECTABLE_LOCAL_ERR	0xdead0802U
+diff --git a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_common_abi.h b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_common_abi.h
+index c2e52ed4e..7bb6fac58 100644
+--- a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_common_abi.h
++++ b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_common_abi.h
+@@ -8,39 +8,6 @@
+ 
+ #include <linux/types.h>
+ 
+-#define CHECK_SIZE_ALIGNMENT(struct_type, alignment) do { \
+-	const u8 arr[((sizeof(struct_type) % (alignment)) == 0U) ? \
+-			  1 : -1]; (void)arr;\
+-	} while (false)
+-
+-#define CHECK_ALIGN16(struct_type) \
+-	CHECK_SIZE_ALIGNMENT(struct_type, sizeof(u16))
+-#define CHECK_ALIGN32(struct_type) \
+-	CHECK_SIZE_ALIGNMENT(struct_type, sizeof(u32))
+-#define CHECK_ALIGN64(struct_type) \
+-	CHECK_SIZE_ALIGNMENT(struct_type, sizeof(u64))
+-
+-#define IA_GOFO_CL_SIZE		(64U)
+-
+-#define CHECK_ALIGN_CL(struct_type) \
+-	CHECK_SIZE_ALIGNMENT(struct_type, IA_GOFO_CL_SIZE)
+-
+-#define IA_GOFO_PAGE_SIZE	(4096U)
+-#define IA_GOFO_SRAM_PAGE_SIZE	(256U)
+-
+-#define CHECK_ALIGN_PAGE(struct_type) \
+-	CHECK_SIZE_ALIGNMENT(struct_type, IA_GOFO_PAGE_SIZE)
+-
+-#define CHECK_EQUAL(lval, rval) do { \
+-	const u8 arr[((lval) == (rval)) ? 1 : -1]; (void)arr;\
+-	} while (false)
+-
+-#define CHECK_SMALLER_OR_EQUAL(lval, rval) do { \
+-	const u8 arr[((lval) <= (rval)) ? 1 : -1]; (void)arr;\
+-	} while (false)
+-
+-#define CHECK_SIZE(struct_type, size)	CHECK_EQUAL(sizeof(struct_type), size)
+-
+ #pragma pack(push, 1)
+ typedef u32	ia_gofo_addr_t;
+ 
+@@ -68,12 +35,6 @@ struct ia_gofo_msg_version_list {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ia_gofo_common_abi_test_func(void)
+-{
+-	CHECK_ALIGN32(struct ia_gofo_version_s);
+-	CHECK_ALIGN32(struct ia_gofo_msg_version_list);
+-}
+-
+ #define TLV_TYPE_PADDING		(0U)
+ 
+ #pragma pack(push, 1)
+@@ -95,12 +56,6 @@ struct ia_gofo_tlv_list {
+ #define TLV_LIST_ALIGNMENT	TLV_ITEM_ALIGNMENT
+ #pragma pack(pop)
+ 
+-static inline void ia_gofo_msg_tlv_test_func(void)
+-{
+-	CHECK_ALIGN16(struct ia_gofo_tlv_header);
+-	CHECK_ALIGN32(struct ia_gofo_tlv_list);
+-}
+-
+ #define IA_GOFO_MODULO(dividend, divisor) ((dividend) % (divisor))
+ 
+ #define IA_GOFO_MSG_ERR_MAX_DETAILS		(4U)
+@@ -124,11 +79,6 @@ struct ia_gofo_msg_err {
+ #define IA_GOFO_MSG_ERR_GROUP_RESERVED	IA_GOFO_MSG_ERR_GROUP_UNSPECIFIED
+ #define IA_GOFO_MSG_ERR_GROUP_GENERAL		1
+ 
+-static inline void ia_gofo_msg_err_test_func(void)
+-{
+-	CHECK_ALIGN64(struct ia_gofo_msg_err);
+-}
+-
+ enum ia_gofo_msg_err_general {
+ 	IA_GOFO_MSG_ERR_GENERAL_OK = IA_GOFO_MSG_ERR_OK,
+ 	IA_GOFO_MSG_ERR_GENERAL_MSG_TOO_SMALL = 1,
+@@ -165,13 +115,6 @@ struct ia_gofo_msg_general_err {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ia_gofo_msg_header_test_func(void)
+-{
+-	CHECK_ALIGN64(struct ia_gofo_msg_header);
+-	CHECK_ALIGN64(struct ia_gofo_msg_header_ack);
+-	CHECK_ALIGN64(struct ia_gofo_msg_general_err);
+-}
+-
+ #pragma pack(push, 1)
+ enum ia_gofo_msg_link_streaming_mode {
+ 	IA_GOFO_MSG_LINK_STREAMING_MODE_SOFF = 0,
+@@ -197,11 +140,6 @@ struct ia_gofo_msg_indirect {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ia_gofo_msg_indirect_test_func(void)
+-{
+-	CHECK_ALIGN64(struct ia_gofo_msg_indirect);
+-}
+-
+ #pragma pack(push, 1)
+ #define IA_GOFO_MSG_LOG_MAX_PARAMS	(4U)
+ #define IA_GOFO_MSG_LOG_DOC_FMT_ID_MIN	(0U)
+@@ -230,13 +168,6 @@ struct ia_gofo_msg_log {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ia_gofo_msg_log_test_func(void)
+-{
+-	CHECK_ALIGN64(struct ia_gofo_msg_log);
+-	CHECK_ALIGN64(struct ia_gofo_msg_log_info);
+-	CHECK_ALIGN64(struct ia_gofo_msg_log_info_ts);
+-}
+-
+ #define IA_GOFO_MSG_ABI_OUT_ACK_QUEUE_ID	(0U)
+ #define IA_GOFO_MSG_ABI_OUT_LOG_QUEUE_ID	(1U)
+ #define IA_GOFO_MSG_ABI_IN_DEV_QUEUE_ID		(2U)
+diff --git a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_isys_abi.h b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_isys_abi.h
+index 0b9c11eef..45db85eb1 100644
+--- a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_isys_abi.h
++++ b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_isys_abi.h
+@@ -25,9 +25,6 @@
+ #define IPU_INSYS_INPUT_MSG_QUEUE	(IPU_INSYS_INPUT_FIRST_QUEUE + 1U)
+ #define IPU_INSYS_INPUT_MSG_MAX_QUEUE	(IPU_INSYS_MAX_INPUT_QUEUES - 1U)
+ 
+-#define MAX_IPINS			(4U)
+-#define MAX_OPINS			(4U)
+-
+ #define MAX_OPINS_FOR_SINGLE_IPINS	(3U)
+ #define DEV_SEND_QUEUE_SIZE		(IPU_INSYS_STREAM_ID_MAX)
+ 
+@@ -133,74 +130,7 @@ enum ipu7_insys_frame_format_type {
+ };
+ 
+ #define IPU_INSYS_FRAME_FORMAT_RAW (IPU_INSYS_FRAME_FORMAT_RAW16)
+-
+-enum ipu7_insys_mipi_data_type {
+-	IPU_INSYS_MIPI_DATA_TYPE_FRAME_START_CODE = 0x00,
+-	IPU_INSYS_MIPI_DATA_TYPE_FRAME_END_CODE = 0x01,
+-	IPU_INSYS_MIPI_DATA_TYPE_LINE_START_CODE = 0x02,
+-	IPU_INSYS_MIPI_DATA_TYPE_LINE_END_CODE = 0x03,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x04 = 0x04,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x05 = 0x05,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x06 = 0x06,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x07 = 0x07,
+-	IPU_INSYS_MIPI_DATA_TYPE_GENERIC_SHORT1 = 0x08,
+-	IPU_INSYS_MIPI_DATA_TYPE_GENERIC_SHORT2 = 0x09,
+-	IPU_INSYS_MIPI_DATA_TYPE_GENERIC_SHORT3 = 0x0a,
+-	IPU_INSYS_MIPI_DATA_TYPE_GENERIC_SHORT4 = 0x0b,
+-	IPU_INSYS_MIPI_DATA_TYPE_GENERIC_SHORT5 = 0x0c,
+-	IPU_INSYS_MIPI_DATA_TYPE_GENERIC_SHORT6 = 0x0d,
+-	IPU_INSYS_MIPI_DATA_TYPE_GENERIC_SHORT7 = 0x0e,
+-	IPU_INSYS_MIPI_DATA_TYPE_GENERIC_SHORT8 = 0x0f,
+-	IPU_INSYS_MIPI_DATA_TYPE_NULL = 0x10,
+-	IPU_INSYS_MIPI_DATA_TYPE_BLANKING_DATA = 0x11,
+-	IPU_INSYS_MIPI_DATA_TYPE_EMBEDDED = 0x12,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x13 = 0x13,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x14 = 0x14,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x15 = 0x15,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x16 = 0x16,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x17 = 0x17,
+-	IPU_INSYS_MIPI_DATA_TYPE_YUV420_8 = 0x18,
+-	IPU_INSYS_MIPI_DATA_TYPE_YUV420_10 = 0x19,
+-	IPU_INSYS_MIPI_DATA_TYPE_YUV420_8_LEGACY = 0x1a,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x1B = 0x1b,
+-	IPU_INSYS_MIPI_DATA_TYPE_YUV420_8_SHIFT = 0x1c,
+-	IPU_INSYS_MIPI_DATA_TYPE_YUV420_10_SHIFT = 0x1d,
+-	IPU_INSYS_MIPI_DATA_TYPE_YUV422_8 = 0x1e,
+-	IPU_INSYS_MIPI_DATA_TYPE_YUV422_10 = 0x1f,
+-	IPU_INSYS_MIPI_DATA_TYPE_RGB_444 = 0x20,
+-	IPU_INSYS_MIPI_DATA_TYPE_RGB_555 = 0x21,
+-	IPU_INSYS_MIPI_DATA_TYPE_RGB_565 = 0x22,
+-	IPU_INSYS_MIPI_DATA_TYPE_RGB_666 = 0x23,
+-	IPU_INSYS_MIPI_DATA_TYPE_RGB_888 = 0x24,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x25 = 0x25,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x26 = 0x26,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x27 = 0x27,
+-	IPU_INSYS_MIPI_DATA_TYPE_RAW_6 = 0x28,
+-	IPU_INSYS_MIPI_DATA_TYPE_RAW_7 = 0x29,
+-	IPU_INSYS_MIPI_DATA_TYPE_RAW_8 = 0x2a,
+-	IPU_INSYS_MIPI_DATA_TYPE_RAW_10 = 0x2b,
+-	IPU_INSYS_MIPI_DATA_TYPE_RAW_12 = 0x2c,
+-	IPU_INSYS_MIPI_DATA_TYPE_RAW_14 = 0x2d,
+-	IPU_INSYS_MIPI_DATA_TYPE_RAW_16 = 0x2e,
+-	IPU_INSYS_MIPI_DATA_TYPE_BINARY_8 = 0x2f,
+-	IPU_INSYS_MIPI_DATA_TYPE_USER_DEF1 = 0x30,
+-	IPU_INSYS_MIPI_DATA_TYPE_USER_DEF2 = 0x31,
+-	IPU_INSYS_MIPI_DATA_TYPE_USER_DEF3 = 0x32,
+-	IPU_INSYS_MIPI_DATA_TYPE_USER_DEF4 = 0x33,
+-	IPU_INSYS_MIPI_DATA_TYPE_USER_DEF5 = 0x34,
+-	IPU_INSYS_MIPI_DATA_TYPE_USER_DEF6 = 0x35,
+-	IPU_INSYS_MIPI_DATA_TYPE_USER_DEF7 = 0x36,
+-	IPU_INSYS_MIPI_DATA_TYPE_USER_DEF8 = 0x37,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x38 = 0x38,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x39 = 0x39,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x3A = 0x3a,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x3B = 0x3b,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x3C = 0x3c,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x3D = 0x3d,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x3E = 0x3e,
+-	IPU_INSYS_MIPI_DATA_TYPE_RESERVED_0x3F = 0x3f,
+-	N_IPU_INSYS_MIPI_DATA_TYPE = 0x40
+-};
++#define N_IPU_INSYS_MIPI_DATA_TYPE 0x40
+ 
+ enum ipu7_insys_mipi_dt_rename_mode {
+ 	IPU_INSYS_MIPI_DT_NO_RENAME = 0,
+@@ -396,8 +326,8 @@ struct ipu7_insys_input_pin {
+ };
+ 
+ struct ipu7_insys_stream_cfg {
+-	struct ipu7_insys_input_pin input_pins[MAX_IPINS];
+-	struct ipu7_insys_output_pin output_pins[MAX_OPINS];
++	struct ipu7_insys_input_pin input_pins[4];
++	struct ipu7_insys_output_pin output_pins[4];
+ 	u16 stream_msg_map;
+ 	u8 port_id;
+ 	u8 vc;
+@@ -408,9 +338,9 @@ struct ipu7_insys_stream_cfg {
+ 
+ struct ipu7_insys_buffset {
+ #ifdef IPU8_INSYS_NEW_ABI
+-	struct ipu7_insys_capture_output_pin_cfg output_pins[MAX_OPINS];
++	struct ipu7_insys_capture_output_pin_cfg output_pins[4];
+ #else
+-	struct ipu7_insys_capture_output_pin_payload output_pins[MAX_OPINS];
++	struct ipu7_insys_capture_output_pin_payload output_pins[4];
+ #endif
+ 	u8 capture_msg_map;
+ 	u8 frame_id;
+@@ -446,21 +376,6 @@ struct ipu7_insys_send_queue_token {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ipu7_insys_types_test_func(void)
+-{
+-	CHECK_ALIGN32(struct ipu7_insys_resolution);
+-	CHECK_ALIGN64(struct ipu7_insys_capture_output_pin_payload);
+-	CHECK_ALIGN32(struct ipu7_insys_output_pin);
+-	CHECK_ALIGN32(struct ipu7_insys_input_pin);
+-	CHECK_ALIGN32(struct ipu7_insys_output_cropping);
+-	CHECK_ALIGN32(struct ipu7_insys_stream_cfg);
+-	CHECK_ALIGN64(struct ipu7_insys_buffset);
+-	CHECK_ALIGN64(struct ipu7_insys_resp);
+-	CHECK_ALIGN64(struct ipu7_insys_resp_queue_token);
+-	CHECK_ALIGN64(struct ipu7_insys_send_queue_token);
+-	CHECK_ALIGN32(struct ipu7_insys_output_link);
+-}
+-
+ enum insys_msg_err_stream {
+ 	INSYS_MSG_ERR_STREAM_OK = IA_GOFO_MSG_ERR_OK,
+ 	INSYS_MSG_ERR_STREAM_STREAM_ID = 1,
+diff --git a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_msg_abi.h b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_msg_abi.h
+index 9aa560219..8a78dd093 100644
+--- a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_msg_abi.h
++++ b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_msg_abi.h
+@@ -93,13 +93,6 @@ enum ipu7_msg_node_option_types {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ipu7_msg_node_test_func(void)
+-{
+-	CHECK_ALIGN32(struct ipu7_msg_node);
+-	CHECK_ALIGN32(struct ipu7_msg_node_profile);
+-	CHECK_ALIGN32(struct ipu7_msg_cb_profile);
+-}
+-
+ #pragma pack(push, 1)
+ 
+ enum ipu7_msg_link_type {
+@@ -183,13 +176,6 @@ struct ipu7_msg_link {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ipu7_msg_abi_link_test_func(void)
+-{
+-	CHECK_ALIGN32(struct ipu7_msg_link);
+-	CHECK_ALIGN32(struct ipu7_msg_link_cmprs_option);
+-	CHECK_ALIGN32(struct ipu7_msg_link_cmprs_plane_desc);
+-}
+-
+ enum ipu7_msg_dev_state {
+ 	IPU_MSG_DEV_STATE_CLOSED = 0,
+ 	IPU_MSG_DEV_STATE_OPEN_WAIT = 1,
+@@ -265,13 +251,6 @@ enum ipu7_msg_err_task {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ipu7_msg_task_test_func(void)
+-{
+-	CHECK_ALIGN64(struct ipu7_msg_task);
+-	CHECK_ALIGN64(struct ipu7_msg_task_done);
+-	CHECK_ALIGN32(struct ipu7_msg_link_cmprs_option);
+-}
+-
+ #pragma pack(push, 1)
+ enum ipu7_msg_term_type {
+ 	IPU_MSG_TERM_TYPE_PAD = 0,
+@@ -312,12 +291,6 @@ struct ipu7_msg_term_event {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ipu7_msg_term_test_func(void)
+-{
+-	CHECK_ALIGN32(struct ipu7_msg_term);
+-	CHECK_ALIGN64(struct ipu7_msg_term_event);
+-}
+-
+ #pragma pack(push, 1)
+ #define IPU_MSG_DEVICE_SEND_MSG_ENABLED		1U
+ #define IPU_MSG_DEVICE_SEND_MSG_DISABLED	0U
+@@ -359,15 +332,6 @@ enum ipu7_msg_err_device {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ipu7_msg_device_test_func(void)
+-{
+-	CHECK_ALIGN32(struct ia_gofo_version_s);
+-	CHECK_ALIGN64(struct ipu7_msg_dev_open);
+-	CHECK_ALIGN64(struct ipu7_msg_dev_open_ack);
+-	CHECK_ALIGN64(struct ipu7_msg_dev_close);
+-	CHECK_ALIGN64(struct ipu7_msg_dev_close_ack);
+-}
+-
+ #pragma pack(push, 1)
+ #define IPU_MSG_GRAPH_ID_UNKNOWN	(0xffU)
+ #define IPU_MSG_GRAPH_SEND_MSG_ENABLED	1U
+@@ -465,15 +429,6 @@ enum ipu7_msg_err_graph {
+ 
+ #pragma pack(pop)
+ 
+-static inline void ipu7_msg_graph_test_func(void)
+-{
+-	CHECK_ALIGN64(struct ipu7_msg_graph_open);
+-	CHECK_ALIGN64(struct ipu7_msg_graph_open_ack);
+-	CHECK_ALIGN64(struct ipu7_msg_graph_close);
+-	CHECK_ALIGN64(struct ipu7_msg_graph_close_ack);
+-	CHECK_ALIGN32(struct ipu7_msg_graph_open_ack_task_q_info);
+-}
+-
+ #define FWPS_MSG_ABI_MAX_INPUT_QUEUES	(60U)
+ #define FWPS_MSG_ABI_MAX_OUTPUT_QUEUES	(2U)
+ #define FWPS_MSG_ABI_MAX_QUEUES \
+diff --git a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_syscom_abi.h b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_syscom_abi.h
+index 3b8d5a3c1..bfa5258d5 100644
+--- a/drivers/media/pci/intel/ipu7/abi/ipu7_fw_syscom_abi.h
++++ b/drivers/media/pci/intel/ipu7/abi/ipu7_fw_syscom_abi.h
+@@ -38,12 +38,6 @@ syscom_config_get_queue_configs_const(const struct syscom_config_s *config)
+ 	return (const struct syscom_queue_params_config *)(&config[1]);
+ }
+ 
+-static inline void syscom_abi_test_func(void)
+-{
+-	CHECK_ALIGN32(struct syscom_queue_params_config);
+-	CHECK_ALIGN32(struct syscom_config_s);
+-}
+-
+ #pragma pack(push, 1)
+ struct syscom_queue_indices_s {
+ 	u32 read_index;
+@@ -52,9 +46,4 @@ struct syscom_queue_indices_s {
+ 
+ #pragma pack(pop)
+ 
+-static inline void syscom_queue_abi_test_func(void)
+-{
+-	CHECK_ALIGN64(struct syscom_queue_indices_s);
+-}
+-
+ #endif
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-boot.c b/drivers/media/pci/intel/ipu7/ipu7-boot.c
+index fea931e8a..7feb13268 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-boot.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-boot.c
+@@ -210,7 +210,7 @@ int ipu7_boot_init_boot_config(struct ipu7_bus_device *adev,
+ 			       int num_queues, u32 uc_freq,
+ 			       dma_addr_t subsys_config, u8 major)
+ {
+-	u32 total_queue_size = 0, total_queue_size_aligned = 0;
++	u32 total_queue_size_aligned = 0;
+ 	struct ipu7_syscom_context *syscom = adev->syscom;
+ 	struct ia_gofo_boot_config *boot_config;
+ 	struct syscom_queue_params_config *cfgs;
+@@ -220,8 +220,8 @@ int ipu7_boot_init_boot_config(struct ipu7_bus_device *adev,
+ 	void *queue_mem_ptr;
+ 	unsigned int i;
+ 
+-	dev_dbg(dev, "boot config queues_nr: %d freq: %u sys_conf: 0x%llx\n",
+-		num_queues, uc_freq, subsys_config);
++	dev_dbg(dev, "boot config queues_nr: %d freq: %u sys_conf: 0x%pad\n",
++		num_queues, uc_freq, &subsys_config);
+ 	/* Allocate boot config. */
+ 	adev->boot_config_size =
+ 		sizeof(*cfgs) * num_queues + sizeof(*boot_config);
+@@ -253,8 +253,7 @@ int ipu7_boot_init_boot_config(struct ipu7_bus_device *adev,
+ 		u32 queue_size = qconfigs[i].max_capacity *
+ 			qconfigs[i].token_size_in_bytes;
+ 
+-		total_queue_size += queue_size;
+-		queue_size = ALIGN(queue_size, IA_GOFO_CL_SIZE);
++		queue_size = ALIGN(queue_size, 64U);
+ 		total_queue_size_aligned += queue_size;
+ 		qconfigs[i].queue_size = queue_size;
+ 	}
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-buttress-regs.h b/drivers/media/pci/intel/ipu7/ipu7-buttress-regs.h
+index 3d3f461a8..3eafd6a38 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-buttress-regs.h
++++ b/drivers/media/pci/intel/ipu7/ipu7-buttress-regs.h
+@@ -280,12 +280,10 @@
+ #define BUTTRESS_IRQ_PS_IRQ				BIT(31)
+ 
+ /* buttress irq */
+-enum {
+-	BUTTRESS_PWR_STATUS_HH_STATE_IDLE,
+-	BUTTRESS_PWR_STATUS_HH_STATE_IN_PRGS,
+-	BUTTRESS_PWR_STATUS_HH_STATE_DONE,
+-	BUTTRESS_PWR_STATUS_HH_STATE_ERR,
+-};
++#define	BUTTRESS_PWR_STATUS_HH_STATE_IDLE	0U
++#define	BUTTRESS_PWR_STATUS_HH_STATE_IN_PRGS	1U
++#define	BUTTRESS_PWR_STATUS_HH_STATE_DONE	2U
++#define	BUTTRESS_PWR_STATUS_HH_STATE_ERR	3U
+ 
+ #define BUTTRESS_TSC_CMD_START_TSC_SYNC		BIT(0)
+ #define BUTTRESS_PWR_STATUS_HH_STATUS_SHIFT	11
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-csi-phy.c b/drivers/media/pci/intel/ipu7/ipu7-isys-csi-phy.c
+index e275ed393..b8c5db7ae 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys-csi-phy.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-csi-phy.c
+@@ -23,10 +23,13 @@
+ #include "ipu7-platform-regs.h"
+ #include "ipu7-isys-csi-phy.h"
+ 
+-#define PORT_A	0U
+-#define PORT_B	1U
+-#define PORT_C	2U
+-#define PORT_D	3U
++#define PORT_A		0U
++#define PORT_B		1U
++#define PORT_C		2U
++#define PORT_D		3U
++
++#define N_DATA_IDS	8U
++static DECLARE_BITMAP(data_ids, N_DATA_IDS);
+ 
+ struct ddlcal_counter_ref_s {
+ 	u16 min_mbps;
+@@ -67,61 +70,61 @@ struct cdr_fbk_cap_prog_params {
+ };
+ 
+ static const struct ddlcal_counter_ref_s table0[] = {
+-	{1500, 1999, 118},
+-	{2000, 2499, 157},
+-	{2500, 3499, 196},
+-	{3500, 4499, 274},
+-	{4500, 4500, 352},
+-	{}
++	{ 1500, 1999, 118 },
++	{ 2000, 2499, 157 },
++	{ 2500, 3499, 196 },
++	{ 3500, 4499, 274 },
++	{ 4500, 4500, 352 },
++	{ }
+ };
+ 
+ static const struct ddlcal_params table1[] = {
+-	{1500, 1587, 0, 143, 167, 17, 3, 4, 29},
+-	{1588, 1687, 0, 135, 167, 15, 3, 4, 27},
+-	{1688, 1799, 0, 127, 135, 15, 2, 4, 26},
+-	{1800, 1928, 0, 119, 135, 13, 2, 3, 24},
+-	{1929, 2076, 0, 111, 135, 13, 2, 3, 23},
+-	{2077, 2249, 0, 103, 135, 11, 2, 3, 21},
+-	{2250, 2454, 0, 95, 103, 11, 1, 3, 19},
+-	{2455, 2699, 0, 87, 103, 9, 1, 3, 18},
+-	{2700, 2999, 0, 79, 103, 9, 1, 2, 16},
+-	{3000, 3229, 0, 71, 71, 7, 1, 2, 15},
+-	{3230, 3599, 1, 87, 103, 9, 1, 3, 18},
+-	{3600, 3999, 1, 79, 103, 9, 1, 2, 16},
+-	{4000, 4499, 1, 71, 103, 7, 1, 2, 15},
+-	{4500, 4500, 1, 63, 71, 7, 0, 2, 13},
+-	{}
++	{ 1500, 1587, 0, 143, 167, 17, 3, 4, 29 },
++	{ 1588, 1687, 0, 135, 167, 15, 3, 4, 27 },
++	{ 1688, 1799, 0, 127, 135, 15, 2, 4, 26 },
++	{ 1800, 1928, 0, 119, 135, 13, 2, 3, 24 },
++	{ 1929, 2076, 0, 111, 135, 13, 2, 3, 23 },
++	{ 2077, 2249, 0, 103, 135, 11, 2, 3, 21 },
++	{ 2250, 2454, 0, 95, 103, 11, 1, 3, 19 },
++	{ 2455, 2699, 0, 87, 103, 9, 1, 3, 18 },
++	{ 2700, 2999, 0, 79, 103, 9, 1, 2, 16 },
++	{ 3000, 3229, 0, 71, 71, 7, 1, 2, 15 },
++	{ 3230, 3599, 1, 87, 103, 9, 1, 3, 18 },
++	{ 3600, 3999, 1, 79, 103, 9, 1, 2, 16 },
++	{ 4000, 4499, 1, 71, 103, 7, 1, 2, 15 },
++	{ 4500, 4500, 1, 63, 71, 7, 0, 2, 13 },
++	{ }
+ };
+ 
+ static const struct i_thssettle_params table2[] = {
+-	{80, 124, 24},
+-	{125, 249, 20},
+-	{250, 499, 16},
+-	{500, 749, 14},
+-	{750, 1499, 13},
+-	{1500, 4500, 12},
+-	{}
++	{ 80, 124, 24 },
++	{ 125, 249, 20 },
++	{ 250, 499, 16 },
++	{ 500, 749, 14 },
++	{ 750, 1499, 13 },
++	{ 1500, 4500, 12 },
++	{ }
+ };
+ 
+ static const struct oa_lane_clk_div_params table6[] = {
+-	{80, 159, 0x1},
+-	{160, 319, 0x2},
+-	{320, 639, 0x3},
+-	{640, 1279, 0x4},
+-	{1280, 2560, 0x5},
+-	{2561, 4500, 0x6},
+-	{}
++	{ 80, 159, 0x1 },
++	{ 160, 319, 0x2 },
++	{ 320, 639, 0x3 },
++	{ 640, 1279, 0x4 },
++	{ 1280, 2560, 0x5 },
++	{ 2561, 4500, 0x6 },
++	{ }
+ };
+ 
+ static const struct cdr_fbk_cap_prog_params table7[] = {
+-	{80, 919, 0},
+-	{920, 1029, 1},
+-	{1030, 1169, 2},
+-	{1170, 1349, 3},
+-	{1350, 1589, 4},
+-	{1590, 1949, 5},
+-	{1950, 2499, 6},
+-	{}
++	{ 80, 919, 0 },
++	{ 920, 1029, 1 },
++	{ 1030, 1169, 2 },
++	{ 1170, 1349, 3 },
++	{ 1350, 1589, 4 },
++	{ 1590, 1949, 5 },
++	{ 1950, 2499, 6 },
++	{ }
+ };
+ 
+ static void dwc_phy_write(struct ipu7_isys *isys, u32 id, u32 addr, u16 data)
+@@ -259,8 +262,6 @@ static void ipu7_isys_csi_phy_reset(struct ipu7_isys *isys, u32 id)
+ 	gpreg_write(isys, id, PHY_SHUTDOWN, 0);
+ }
+ 
+-#define N_DATA_IDS		8
+-static DECLARE_BITMAP(data_ids, N_DATA_IDS);
+ /* 8 Data ID monitors, each Data ID is composed by pair of VC and data type */
+ static int __dids_config(struct ipu7_isys_csi2 *csi2, u32 id, u8 vc, u8 dt)
+ {
+@@ -327,7 +328,7 @@ static int ipu7_isys_csi_ctrl_dids_config(struct ipu7_isys_csi2 *csi2, u32 id)
+ 
+ 	for (i = 0; i < desc.num_entries; i++) {
+ 		desc_entry = &desc.entry[i];
+-		if (desc_entry->bus.csi2.vc < NR_OF_CSI2_VC) {
++		if (desc_entry->bus.csi2.vc < IPU7_NR_OF_CSI2_VC) {
+ 			ret = __dids_config(csi2, id, desc_entry->bus.csi2.vc,
+ 					    desc_entry->bus.csi2.dt);
+ 			if (ret)
+@@ -338,7 +339,7 @@ static int ipu7_isys_csi_ctrl_dids_config(struct ipu7_isys_csi2 *csi2, u32 id)
+ 	return 0;
+ }
+ 
+-#define CDPHY_TIMEOUT (5000000)
++#define CDPHY_TIMEOUT 5000000U
+ static int ipu7_isys_phy_ready(struct ipu7_isys *isys, u32 id)
+ {
+ 	void __iomem *isys_base = isys->pdata->base;
+@@ -396,9 +397,9 @@ static int ipu7_isys_phy_ready(struct ipu7_isys *isys, u32 id)
+ 	return ret;
+ }
+ 
+-static int lookup_table1(u16 mbps)
++static int lookup_table1(u64 mbps)
+ {
+-	int i;
++	unsigned int i;
+ 
+ 	for (i = 0; i < ARRAY_SIZE(table1); i++) {
+ 		if (mbps >= table1[i].min_mbps && mbps <= table1[i].max_mbps)
+@@ -733,6 +734,7 @@ static void ipu7_isys_cphy_config(struct ipu7_isys *isys, u8 id, u8 lanes,
+ 	u16 reg;
+ 	u16 val;
+ 	u32 i;
++	u64 r64;
+ 	u32 r;
+ 
+ 	if (is_ipu7p5(isys->adev->isp->hw_ver))
+@@ -772,13 +774,10 @@ static void ipu7_isys_cphy_config(struct ipu7_isys *isys, u8 id, u8 lanes,
+ 	 * The formula is suitable for data rate 80-3500Msps.
+ 	 * Timebase (us) = 1, DIV = 32, TDDL (UI) = 0.5
+ 	 */
+-	if (mbps >= 80U) {
+-		coarse_target = (u16)div_u64_rem(mbps, 16, &r);
+-		if (!r)
+-			coarse_target--;
+-	} else {
++	if (mbps >= 80U)
++		coarse_target = DIV_ROUND_UP_ULL(mbps, 16) - 1;
++	else
+ 		coarse_target = 56;
+-	}
+ 
+ 	for (i = 0; i < trios; i++) {
+ 		reg = CORE_DIG_CLANE_0_RW_HS_RX_2 + i * 0x400;
+@@ -808,8 +807,8 @@ static void ipu7_isys_cphy_config(struct ipu7_isys *isys, u8 id, u8 lanes,
+ 		dwc_phy_write_mask(isys, id, reg, 2, 0, 2);
+ 	}
+ 
+-	deass_thresh = (u16)div_u64_rem(7 * 1000 * 6, mbps * 5U, &r) + 1;
+-	if (r != 0)
++	deass_thresh = (u16)div64_u64_rem(7 * 1000 * 6, mbps * 5U, &r64) + 1;
++	if (r64 != 0)
+ 		deass_thresh++;
+ 
+ 	reg = CORE_DIG_RW_TRIO0_2;
+@@ -817,8 +816,7 @@ static void ipu7_isys_cphy_config(struct ipu7_isys *isys, u8 id, u8 lanes,
+ 		dwc_phy_write_mask(isys, id, reg + 0x400 * i,
+ 				   deass_thresh, 0, 7);
+ 
+-	delay_thresh =
+-		((224U - (9U * 7U)) * 1000U) / (5U * mbps) - 7U;
++	delay_thresh = div64_u64((224U - (9U * 7U)) * 1000U, 5U * mbps) - 7u;
+ 
+ 	if (delay_thresh < 1)
+ 		delay_thresh = 1;
+@@ -869,8 +867,8 @@ static void ipu7_isys_cphy_config(struct ipu7_isys *isys, u8 id, u8 lanes,
+ 	}
+ }
+ 
+-static void ipu7_isys_phy_config(struct ipu7_isys *isys, u8 id, u8 lanes,
+-				 bool aggregation)
++static int ipu7_isys_phy_config(struct ipu7_isys *isys, u8 id, u8 lanes,
++				bool aggregation)
+ {
+ 	struct device *dev = &isys->adev->auxdev.dev;
+ 	u32 phy_mode;
+@@ -883,8 +881,8 @@ static void ipu7_isys_phy_config(struct ipu7_isys *isys, u8 id, u8 lanes,
+ 		link_freq = ipu7_isys_csi2_get_link_freq(&isys->csi2[id]);
+ 
+ 	if (link_freq < 0) {
+-		dev_warn(dev, "get link freq failed, use default mbps\n");
+-		link_freq = 560000000;
++		dev_err(dev, "get link freq failed (%lld)\n", link_freq);
++		return link_freq;
+ 	}
+ 
+ 	mbps = div_u64(link_freq, 500000);
+@@ -948,6 +946,8 @@ static void ipu7_isys_phy_config(struct ipu7_isys *isys, u8 id, u8 lanes,
+ 		dev_err(dev, "unsupported phy mode %d!\n",
+ 			isys->csi2[id].phy_mode);
+ 	}
++
++	return 0;
+ }
+ 
+ int ipu7_isys_csi_phy_powerup(struct ipu7_isys_csi2 *csi2)
+@@ -984,7 +984,10 @@ int ipu7_isys_csi_phy_powerup(struct ipu7_isys_csi2 *csi2)
+ 	ipu7_isys_csi_ctrl_cfg(csi2);
+ 	ipu7_isys_csi_ctrl_dids_config(csi2, id);
+ 
+-	ipu7_isys_phy_config(isys, id, lanes, aggregation);
++	ret = ipu7_isys_phy_config(isys, id, lanes, aggregation);
++	if (ret < 0)
++		return ret;
++
+ 	gpreg_write(isys, id, PHY_RESET, 1);
+ 	gpreg_write(isys, id, PHY_SHUTDOWN, 1);
+ 	dwc_csi_write(isys, id, DPHY_RSTZ, 1);
+@@ -1000,7 +1003,10 @@ int ipu7_isys_csi_phy_powerup(struct ipu7_isys_csi2 *csi2)
+ 
+ 	/* config PORT_B if aggregation mode */
+ 	if (aggregation) {
+-		ipu7_isys_phy_config(isys, PORT_B, 2, aggregation);
++		ret = ipu7_isys_phy_config(isys, PORT_B, 2, aggregation);
++		if (ret < 0)
++			return ret;
++
+ 		gpreg_write(isys, PORT_B, PHY_RESET, 1);
+ 		gpreg_write(isys, PORT_B, PHY_SHUTDOWN, 1);
+ 		dwc_csi_write(isys, PORT_B, DPHY_RSTZ, 1);
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-csi2-regs.h b/drivers/media/pci/intel/ipu7/ipu7-isys-csi2-regs.h
+index 32704ca21..aad52c44a 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys-csi2-regs.h
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-csi2-regs.h
+@@ -7,1054 +7,1054 @@
+ #define IPU7_ISYS_CSI2_REG_H
+ 
+ /* IS main regs base */
+-#define IS_MAIN_BASE				(0x240000U)
+-#define IS_MAIN_S2B_BASE			(IS_MAIN_BASE + 0x22000U)
+-#define IS_MAIN_B2O_BASE			(IS_MAIN_BASE + 0x26000U)
+-#define IS_MAIN_ISD_M0_BASE			(IS_MAIN_BASE + 0x2b000U)
+-#define IS_MAIN_ISD_M1_BASE			(IS_MAIN_BASE + 0x2b100U)
+-#define IS_MAIN_ISD_INT_BASE			(IS_MAIN_BASE + 0x2b200U)
+-#define IS_MAIN_GDA_BASE			(IS_MAIN_BASE + 0x32000U)
+-#define IS_MAIN_GPREGS_MAIN_BASE		(IS_MAIN_BASE + 0x32500U)
+-#define IS_MAIN_IRQ_CTRL_BASE			(IS_MAIN_BASE + 0x32700U)
+-#define IS_MAIN_PWM_CTRL_BASE			(IS_MAIN_BASE + 0x32b00U)
++#define IS_MAIN_BASE				0x240000
++#define IS_MAIN_S2B_BASE			(IS_MAIN_BASE + 0x22000)
++#define IS_MAIN_B2O_BASE			(IS_MAIN_BASE + 0x26000)
++#define IS_MAIN_ISD_M0_BASE			(IS_MAIN_BASE + 0x2b000)
++#define IS_MAIN_ISD_M1_BASE			(IS_MAIN_BASE + 0x2b100)
++#define IS_MAIN_ISD_INT_BASE			(IS_MAIN_BASE + 0x2b200)
++#define IS_MAIN_GDA_BASE			(IS_MAIN_BASE + 0x32000)
++#define IS_MAIN_GPREGS_MAIN_BASE		(IS_MAIN_BASE + 0x32500)
++#define IS_MAIN_IRQ_CTRL_BASE			(IS_MAIN_BASE + 0x32700)
++#define IS_MAIN_PWM_CTRL_BASE			(IS_MAIN_BASE + 0x32b00)
+ 
+-#define S2B_IRQ_COMMON_0_CTL_STATUS		(IS_MAIN_S2B_BASE + 0x1cU)
+-#define S2B_IRQ_COMMON_0_CTL_CLEAR		(IS_MAIN_S2B_BASE + 0x20U)
+-#define S2B_IRQ_COMMON_0_CTL_ENABLE		(IS_MAIN_S2B_BASE + 0x24U)
+-#define S2B_IID_IRQ_CTL_STATUS(iid)		(IS_MAIN_S2B_BASE + 0x94U + \
+-						 0x100U * (iid))
++#define S2B_IRQ_COMMON_0_CTL_STATUS		(IS_MAIN_S2B_BASE + 0x1c)
++#define S2B_IRQ_COMMON_0_CTL_CLEAR		(IS_MAIN_S2B_BASE + 0x20)
++#define S2B_IRQ_COMMON_0_CTL_ENABLE		(IS_MAIN_S2B_BASE + 0x24)
++#define S2B_IID_IRQ_CTL_STATUS(iid)		(IS_MAIN_S2B_BASE + 0x94 + \
++						 0x100 * (iid))
+ 
+-#define B2O_IRQ_COMMON_0_CTL_STATUS		(IS_MAIN_B2O_BASE + 0x30U)
+-#define B2O_IRQ_COMMON_0_CTL_CLEAR		(IS_MAIN_B2O_BASE + 0x34U)
+-#define B2O_IRQ_COMMON_0_CTL_ENABLE		(IS_MAIN_B2O_BASE + 0x38U)
+-#define B2O_IID_IRQ_CTL_STATUS(oid)		(IS_MAIN_B2O_BASE + 0x3dcU + \
+-						 0x200U * (oid))
++#define B2O_IRQ_COMMON_0_CTL_STATUS		(IS_MAIN_B2O_BASE + 0x30)
++#define B2O_IRQ_COMMON_0_CTL_CLEAR		(IS_MAIN_B2O_BASE + 0x34)
++#define B2O_IRQ_COMMON_0_CTL_ENABLE		(IS_MAIN_B2O_BASE + 0x38)
++#define B2O_IID_IRQ_CTL_STATUS(oid)		(IS_MAIN_B2O_BASE + 0x3dc + \
++						 0x200 * (oid))
+ 
+-#define ISD_M0_IRQ_CTL_STATUS			(IS_MAIN_ISD_M0_BASE + 0x1cU)
+-#define ISD_M0_IRQ_CTL_CLEAR			(IS_MAIN_ISD_M0_BASE + 0x20U)
+-#define ISD_M0_IRQ_CTL_ENABLE			(IS_MAIN_ISD_M0_BASE + 0x24U)
++#define ISD_M0_IRQ_CTL_STATUS			(IS_MAIN_ISD_M0_BASE + 0x1c)
++#define ISD_M0_IRQ_CTL_CLEAR			(IS_MAIN_ISD_M0_BASE + 0x20)
++#define ISD_M0_IRQ_CTL_ENABLE			(IS_MAIN_ISD_M0_BASE + 0x24)
+ 
+-#define ISD_M1_IRQ_CTL_STATUS			(IS_MAIN_ISD_M1_BASE + 0x1cU)
+-#define ISD_M1_IRQ_CTL_CLEAR			(IS_MAIN_ISD_M1_BASE + 0x20U)
+-#define ISD_M1_IRQ_CTL_ENABLE			(IS_MAIN_ISD_M1_BASE + 0x24U)
++#define ISD_M1_IRQ_CTL_STATUS			(IS_MAIN_ISD_M1_BASE + 0x1c)
++#define ISD_M1_IRQ_CTL_CLEAR			(IS_MAIN_ISD_M1_BASE + 0x20)
++#define ISD_M1_IRQ_CTL_ENABLE			(IS_MAIN_ISD_M1_BASE + 0x24)
+ 
+-#define ISD_INT_IRQ_CTL_STATUS			(IS_MAIN_ISD_INT_BASE + 0x1cU)
+-#define ISD_INT_IRQ_CTL_CLEAR			(IS_MAIN_ISD_INT_BASE + 0x20U)
+-#define ISD_INT_IRQ_CTL_ENABLE			(IS_MAIN_ISD_INT_BASE + 0x24U)
++#define ISD_INT_IRQ_CTL_STATUS			(IS_MAIN_ISD_INT_BASE + 0x1c)
++#define ISD_INT_IRQ_CTL_CLEAR			(IS_MAIN_ISD_INT_BASE + 0x20)
++#define ISD_INT_IRQ_CTL_ENABLE			(IS_MAIN_ISD_INT_BASE + 0x24)
+ 
+-#define GDA_IRQ_CTL_STATUS			(IS_MAIN_GDA_BASE + 0x1cU)
+-#define GDA_IRQ_CTL_CLEAR			(IS_MAIN_GDA_BASE + 0x20U)
+-#define GDA_IRQ_CTL_ENABLE			(IS_MAIN_GDA_BASE + 0x24U)
++#define GDA_IRQ_CTL_STATUS			(IS_MAIN_GDA_BASE + 0x1c)
++#define GDA_IRQ_CTL_CLEAR			(IS_MAIN_GDA_BASE + 0x20)
++#define GDA_IRQ_CTL_ENABLE			(IS_MAIN_GDA_BASE + 0x24)
+ 
+ #define IS_MAIN_IRQ_CTL_EDGE			IS_MAIN_IRQ_CTRL_BASE
+-#define IS_MAIN_IRQ_CTL_MASK			(IS_MAIN_IRQ_CTRL_BASE + 0x4U)
+-#define IS_MAIN_IRQ_CTL_STATUS			(IS_MAIN_IRQ_CTRL_BASE + 0x8U)
+-#define IS_MAIN_IRQ_CTL_CLEAR			(IS_MAIN_IRQ_CTRL_BASE + 0xcU)
+-#define IS_MAIN_IRQ_CTL_ENABLE			(IS_MAIN_IRQ_CTRL_BASE + 0x10U)
+-#define IS_MAIN_IRQ_CTL_LEVEL_NOT_PULSE		(IS_MAIN_IRQ_CTRL_BASE + 0x14U)
++#define IS_MAIN_IRQ_CTL_MASK			(IS_MAIN_IRQ_CTRL_BASE + 0x4)
++#define IS_MAIN_IRQ_CTL_STATUS			(IS_MAIN_IRQ_CTRL_BASE + 0x8)
++#define IS_MAIN_IRQ_CTL_CLEAR			(IS_MAIN_IRQ_CTRL_BASE + 0xc)
++#define IS_MAIN_IRQ_CTL_ENABLE			(IS_MAIN_IRQ_CTRL_BASE + 0x10)
++#define IS_MAIN_IRQ_CTL_LEVEL_NOT_PULSE		(IS_MAIN_IRQ_CTRL_BASE + 0x14)
+ 
+ /* IS IO regs base */
+-#define IS_PHY_NUM				(4U)
+-#define IS_IO_BASE				(0x280000U)
++#define IS_PHY_NUM				4U
++#define IS_IO_BASE				0x280000
+ 
+ /* dwc csi cdphy registers */
+-#define IS_IO_CDPHY_BASE(i)			(IS_IO_BASE + 0x10000U * (i))
+-#define PPI_STARTUP_RW_COMMON_DPHY_0			0x1800U
+-#define PPI_STARTUP_RW_COMMON_DPHY_1			0x1802U
+-#define PPI_STARTUP_RW_COMMON_DPHY_2			0x1804U
+-#define PPI_STARTUP_RW_COMMON_DPHY_3			0x1806U
+-#define PPI_STARTUP_RW_COMMON_DPHY_4			0x1808U
+-#define PPI_STARTUP_RW_COMMON_DPHY_5			0x180aU
+-#define PPI_STARTUP_RW_COMMON_DPHY_6			0x180cU
+-#define PPI_STARTUP_RW_COMMON_DPHY_7			0x180eU
+-#define PPI_STARTUP_RW_COMMON_DPHY_8			0x1810U
+-#define PPI_STARTUP_RW_COMMON_DPHY_9			0x1812U
+-#define PPI_STARTUP_RW_COMMON_DPHY_A			0x1814U
+-#define PPI_STARTUP_RW_COMMON_DPHY_10			0x1820U
+-#define PPI_STARTUP_RW_COMMON_STARTUP_1_1		0x1822U
+-#define PPI_STARTUP_RW_COMMON_STARTUP_1_2		0x1824U
+-#define PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_0		0x1840U
+-#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_1		0x1842U
+-#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_2		0x1844U
+-#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_3		0x1846U
+-#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_4		0x1848U
+-#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_5		0x184aU
+-#define PPI_CALIBCTRL_RW_COMMON_BG_0			0x184cU
+-#define PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_7		0x184eU
+-#define PPI_CALIBCTRL_RW_ADC_CFG_0			0x1850U
+-#define PPI_CALIBCTRL_RW_ADC_CFG_1			0x1852U
+-#define PPI_CALIBCTRL_R_ADC_DEBUG			0x1854U
+-#define PPI_RW_LPDCOCAL_TOP_OVERRIDE			0x1c00U
+-#define PPI_RW_LPDCOCAL_TIMEBASE			0x1c02U
+-#define PPI_RW_LPDCOCAL_NREF				0x1c04U
+-#define PPI_RW_LPDCOCAL_NREF_RANGE			0x1c06U
+-#define PPI_RW_LPDCOCAL_NREF_TRIGGER_MAN		0x1c08U
+-#define PPI_RW_LPDCOCAL_TWAIT_CONFIG			0x1c0aU
+-#define PPI_RW_LPDCOCAL_VT_CONFIG			0x1c0cU
+-#define PPI_R_LPDCOCAL_DEBUG_RB				0x1c0eU
+-#define PPI_RW_LPDCOCAL_COARSE_CFG			0x1c10U
+-#define PPI_R_LPDCOCAL_DEBUG_COARSE_RB			0x1c12U
+-#define PPI_R_LPDCOCAL_DEBUG_COARSE_MEAS_0_RB		0x1c14U
+-#define PPI_R_LPDCOCAL_DEBUG_COARSE_MEAS_1_RB		0x1c16U
+-#define PPI_R_LPDCOCAL_DEBUG_COARSE_FWORD_RB		0x1c18U
+-#define PPI_R_LPDCOCAL_DEBUG_MEASURE_CURR_ERROR		0x1c1aU
+-#define PPI_R_LPDCOCAL_DEBUG_MEASURE_LAST_ERROR		0x1c1cU
+-#define PPI_R_LPDCOCAL_DEBUG_VT				0x1c1eU
+-#define PPI_RW_LB_TIMEBASE_CONFIG			0x1c20U
+-#define PPI_RW_LB_STARTCMU_CONFIG			0x1c22U
+-#define PPI_R_LBPULSE_COUNTER_RB			0x1c24U
+-#define PPI_R_LB_START_CMU_RB				0x1c26U
+-#define PPI_RW_LB_DPHY_BURST_START			0x1c28U
+-#define PPI_RW_LB_CPHY_BURST_START			0x1c2aU
+-#define PPI_RW_DDLCAL_CFG_0				0x1c40U
+-#define PPI_RW_DDLCAL_CFG_1				0x1c42U
+-#define PPI_RW_DDLCAL_CFG_2				0x1c44U
+-#define PPI_RW_DDLCAL_CFG_3				0x1c46U
+-#define PPI_RW_DDLCAL_CFG_4				0x1c48U
+-#define PPI_RW_DDLCAL_CFG_5				0x1c4aU
+-#define PPI_RW_DDLCAL_CFG_6				0x1c4cU
+-#define PPI_RW_DDLCAL_CFG_7				0x1c4eU
+-#define PPI_R_DDLCAL_DEBUG_0				0x1c50U
+-#define PPI_R_DDLCAL_DEBUG_1				0x1c52U
+-#define PPI_RW_PARITY_TEST				0x1c60U
+-#define PPI_RW_STARTUP_OVR_0				0x1c62U
+-#define PPI_RW_STARTUP_STATE_OVR_1			0x1c64U
+-#define PPI_RW_DTB_SELECTOR				0x1c66U
+-#define PPI_RW_DPHY_CLK_SPARE				0x1c6aU
+-#define PPI_RW_COMMON_CFG				0x1c6cU
+-#define PPI_RW_TERMCAL_CFG_0				0x1c80U
+-#define PPI_R_TERMCAL_DEBUG_0				0x1c82U
+-#define PPI_RW_TERMCAL_CTRL_0				0x1c84U
+-#define PPI_RW_OFFSETCAL_CFG_0				0x1ca0U
+-#define PPI_R_OFFSETCAL_DEBUG_LANE0			0x1ca2U
+-#define PPI_R_OFFSETCAL_DEBUG_LANE1			0x1ca4U
+-#define PPI_R_OFFSETCAL_DEBUG_LANE2			0x1ca6U
+-#define PPI_R_OFFSETCAL_DEBUG_LANE3			0x1ca8U
+-#define PPI_R_OFFSETCAL_DEBUG_LANE4			0x1caaU
+-#define PPI_RW_HSDCOCAL_CFG_O				0x1d00U
+-#define PPI_RW_HSDCOCAL_CFG_1				0x1d02U
+-#define PPI_RW_HSDCOCAL_CFG_2				0x1d04U
+-#define PPI_RW_HSDCOCAL_CFG_3				0x1d06U
+-#define PPI_RW_HSDCOCAL_CFG_4				0x1d08U
+-#define PPI_RW_HSDCOCAL_CFG_5				0x1d0aU
+-#define PPI_RW_HSDCOCAL_CFG_6				0x1d0cU
+-#define PPI_RW_HSDCOCAL_CFG_7				0x1d0eU
+-#define PPI_RW_HSDCOCAL_CFG_8				0x1d10U
+-#define PPI_R_HSDCOCAL_DEBUG_RB				0x1d12U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_0	0x2000U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_1	0x2002U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_2	0x2004U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_3	0x2006U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_4	0x2008U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_5	0x200aU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_6	0x200cU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_7	0x200eU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_8	0x2010U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_9	0x2012U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_10	0x2014U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_11	0x2016U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_12	0x2018U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_13	0x201aU
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_14	0x201cU
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_15	0x201eU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_0	0x2020U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_1	0x2022U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_2	0x2024U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_3	0x2026U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_4	0x2028U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_5	0x202aU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_6	0x202cU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_7	0x202eU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_8	0x2030U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_9	0x2032U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_10	0x2034U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_11	0x2036U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_12	0x2038U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_13	0x203aU
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_14	0x203cU
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_15	0x203eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_0		0x2040U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_1		0x2042U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_2		0x2044U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_3		0x2046U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_4		0x2048U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_5		0x204aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_6		0x204cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_7		0x204eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_8		0x2050U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_9		0x2052U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_10		0x2054U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_11		0x2056U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_12		0x2058U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_13		0x205aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_14		0x205cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_15		0x205eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_0		0x2060U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_1		0x2062U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_2		0x2064U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_3		0x2066U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_4		0x2068U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_5		0x206aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_6		0x206cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_7		0x206eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_8		0x2070U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_9		0x2072U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_10		0x2074U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_11		0x2076U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_12		0x2078U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_13		0x207aU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_14		0x207cU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_15		0x207eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_0		0x2080U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_1		0x2082U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_2		0x2084U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_3		0x2086U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_4		0x2088U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_5_0	0x20a0U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_5_1	0x20a2U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_5_2	0x20a4U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_5_3	0x20a6U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_5_4	0x20a8U
+-#define CORE_DIG_RW_TRIO0_0				0x2100U
+-#define CORE_DIG_RW_TRIO0_1				0x2102U
+-#define CORE_DIG_RW_TRIO0_2				0x2104U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_0	0x2400U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_1	0x2402U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_2	0x2404U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_3	0x2406U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_4	0x2408U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_5	0x240aU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_6	0x240cU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_7	0x240eU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_8	0x2410U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_9	0x2412U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_10	0x2414U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_11	0x2416U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_12	0x2418U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_13	0x241aU
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_14	0x241cU
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_15	0x241eU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_0	0x2420U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_1	0x2422U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_2	0x2424U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_3	0x2426U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_4	0x2428U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_5	0x242aU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_6	0x242cU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_7	0x242eU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_8	0x2430U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_9	0x2432U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_10	0x2434U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_11	0x2436U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_12	0x2438U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_13	0x243aU
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_14	0x243cU
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_15	0x243eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_0		0x2440U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_1		0x2442U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_2		0x2444U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_3		0x2446U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_4		0x2448U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_5		0x244aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_6		0x244cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_7		0x244eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_8		0x2450U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_9		0x2452U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_10		0x2454U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_11		0x2456U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_12		0x2458U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_13		0x245aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_14		0x245cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_15		0x245eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_0		0x2460U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_1		0x2462U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_2		0x2464U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_3		0x2466U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_4		0x2468U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_5		0x246aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_6		0x246cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_7		0x246eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_8		0x2470U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_9		0x2472U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_10		0x2474U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_11		0x2476U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_12		0x2478U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_13		0x247aU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_14		0x247cU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_15		0x247eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_0		0x2480U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_1		0x2482U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_2		0x2484U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_3		0x2486U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_4		0x2488U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_5_0	0x24a0U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_5_1	0x24a2U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_5_2	0x24a4U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_5_3	0x24a6U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_5_4	0x24a8U
+-#define CORE_DIG_RW_TRIO1_0				0x2500U
+-#define CORE_DIG_RW_TRIO1_1				0x2502U
+-#define CORE_DIG_RW_TRIO1_2				0x2504U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_0	0x2800U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_1	0x2802U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_2	0x2804U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_3	0x2806U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_4	0x2808U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_5	0x280aU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_6	0x280cU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_7	0x280eU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_8	0x2810U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_9	0x2812U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_10	0x2814U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_11	0x2816U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_12	0x2818U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_13	0x281aU
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_14	0x281cU
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_15	0x281eU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_0	0x2820U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_1	0x2822U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_2	0x2824U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_3	0x2826U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_4	0x2828U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_5	0x282aU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_6	0x282cU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_7	0x282eU
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_8	0x2830U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_9	0x2832U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_10	0x2834U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_11	0x2836U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_12	0x2838U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_13	0x283aU
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_14	0x283cU
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_15	0x283eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_0		0x2840U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_1		0x2842U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_2		0x2844U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_3		0x2846U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_4		0x2848U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_5		0x284aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_6		0x284cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_7		0x284eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_8		0x2850U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_9		0x2852U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_10		0x2854U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_11		0x2856U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_12		0x2858U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_13		0x285aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_14		0x285cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_15		0x285eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_0		0x2860U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_1		0x2862U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_2		0x2864U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_3		0x2866U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_4		0x2868U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_5		0x286aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_6		0x286cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_7		0x286eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_8		0x2870U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_9		0x2872U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_10		0x2874U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_11		0x2876U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_12		0x2878U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_13		0x287aU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_14		0x287cU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_15		0x287eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_0		0x2880U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_1		0x2882U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_2		0x2884U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_3		0x2886U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_4		0x2888U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_5_0	0x28a0U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_5_1	0x28a2U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_5_2	0x28a4U
+-#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_5_3	0x28a6U
+-#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_5_4	0x28a8U
+-#define CORE_DIG_RW_TRIO2_0				0x2900U
+-#define CORE_DIG_RW_TRIO2_1				0x2902U
+-#define CORE_DIG_RW_TRIO2_2				0x2904U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_0	0x2c00U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_1	0x2c02U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_2	0x2c04U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_3	0x2c06U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_4	0x2c08U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_5	0x2c0aU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_6	0x2c0cU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_7	0x2c0eU
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_8	0x2c10U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_9	0x2c12U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_10	0x2c14U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_11	0x2c16U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_12	0x2c18U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_13	0x2c1aU
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_14	0x2c1cU
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_15	0x2c1eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_0		0x2c40U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_1		0x2c42U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_2		0x2c44U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_3		0x2c46U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_4		0x2c48U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_5		0x2c4aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_6		0x2c4cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_7		0x2c4eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_8		0x2c50U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_9		0x2c52U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_10		0x2c54U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_11		0x2c56U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_12		0x2c58U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_13		0x2c5aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_14		0x2c5cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_15		0x2c5eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_0		0x2c60U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_1		0x2c62U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_2		0x2c64U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_3		0x2c66U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_4		0x2c68U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_5		0x2c6aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_6		0x2c6cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_7		0x2c6eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_8		0x2c70U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_9		0x2c72U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_10		0x2c74U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_11		0x2c76U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_12		0x2c78U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_13		0x2c7aU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_14		0x2c7cU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_15		0x2c7eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_0		0x2c80U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_1		0x2c82U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_2		0x2c84U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_3		0x2c86U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_4		0x2c88U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_0		0x3040U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_1		0x3042U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_2		0x3044U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_3		0x3046U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_4		0x3048U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_5		0x304aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_6		0x304cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_7		0x304eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_8		0x3050U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_9		0x3052U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_10		0x3054U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_11		0x3056U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_12		0x3058U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_13		0x305aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_14		0x305cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_15		0x305eU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_0		0x3060U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_1		0x3062U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_2		0x3064U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_3		0x3066U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_4		0x3068U
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_5		0x306aU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_6		0x306cU
+-#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_7		0x306eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_8		0x3070U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_9		0x3072U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_10		0x3074U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_11		0x3076U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_12		0x3078U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_13		0x307aU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_14		0x307cU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_15		0x307eU
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_0		0x3080U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_1		0x3082U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_2		0x3084U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_3		0x3086U
+-#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_4		0x3088U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_CLK_OVR_0_0		0x3400U
+-#define CORE_DIG_IOCTRL_RW_DPHY_PPI_CLK_OVR_0_1		0x3402U
+-#define CORE_DIG_IOCTRL_R_DPHY_PPI_CLK_OVR_0_2		0x3404U
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_0		0x3800U
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_1		0x3802U
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_2		0x3804U
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_3		0x3806U
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_4		0x3808U
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_5		0x380aU
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_6		0x380cU
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_7		0x380eU
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_8		0x3810U
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_9		0x3812U
+-#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_10		0x3814U
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_11		0x3816U
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_12		0x3818U
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_13		0x381aU
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_14		0x381cU
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_15		0x381eU
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_0		0x3820U
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_1		0x3822U
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_2		0x3824U
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_3		0x3826U
+-#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_4		0x3828U
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_0		0x3840U
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_1		0x3842U
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_2		0x3844U
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_3		0x3846U
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_4		0x3848U
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_5		0x384aU
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_6		0x384cU
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_7		0x384eU
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_8		0x3850U
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_9		0x3852U
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_10		0x3854U
+-#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_11		0x3856U
+-#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_2_12		0x3858U
+-#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_2_13		0x385aU
+-#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_2_14		0x385cU
+-#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_2_15		0x385eU
+-#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_3_0		0x3860U
+-#define CORE_DIG_RW_COMMON_0				0x3880U
+-#define CORE_DIG_RW_COMMON_1				0x3882U
+-#define CORE_DIG_RW_COMMON_2				0x3884U
+-#define CORE_DIG_RW_COMMON_3				0x3886U
+-#define CORE_DIG_RW_COMMON_4				0x3888U
+-#define CORE_DIG_RW_COMMON_5				0x388aU
+-#define CORE_DIG_RW_COMMON_6				0x388cU
+-#define CORE_DIG_RW_COMMON_7				0x388eU
+-#define CORE_DIG_RW_COMMON_8				0x3890U
+-#define CORE_DIG_RW_COMMON_9				0x3892U
+-#define CORE_DIG_RW_COMMON_10				0x3894U
+-#define CORE_DIG_RW_COMMON_11				0x3896U
+-#define CORE_DIG_RW_COMMON_12				0x3898U
+-#define CORE_DIG_RW_COMMON_13				0x389aU
+-#define CORE_DIG_RW_COMMON_14				0x389cU
+-#define CORE_DIG_RW_COMMON_15				0x389eU
+-#define CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_0		0x39e0U
+-#define CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_1		0x39e2U
+-#define CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_2		0x39e4U
+-#define CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_3		0x39e6U
+-#define CORE_DIG_COMMON_RW_DESKEW_FINE_MEM		0x3fe0U
+-#define CORE_DIG_COMMON_R_DESKEW_FINE_MEM		0x3fe2U
+-#define PPI_RW_DPHY_LANE0_LBERT_0			0x4000U
+-#define PPI_RW_DPHY_LANE0_LBERT_1			0x4002U
+-#define PPI_R_DPHY_LANE0_LBERT_0			0x4004U
+-#define PPI_R_DPHY_LANE0_LBERT_1			0x4006U
+-#define PPI_RW_DPHY_LANE0_SPARE				0x4008U
+-#define PPI_RW_DPHY_LANE1_LBERT_0			0x4400U
+-#define PPI_RW_DPHY_LANE1_LBERT_1			0x4402U
+-#define PPI_R_DPHY_LANE1_LBERT_0			0x4404U
+-#define PPI_R_DPHY_LANE1_LBERT_1			0x4406U
+-#define PPI_RW_DPHY_LANE1_SPARE				0x4408U
+-#define PPI_RW_DPHY_LANE2_LBERT_0			0x4800U
+-#define PPI_RW_DPHY_LANE2_LBERT_1			0x4802U
+-#define PPI_R_DPHY_LANE2_LBERT_0			0x4804U
+-#define PPI_R_DPHY_LANE2_LBERT_1			0x4806U
+-#define PPI_RW_DPHY_LANE2_SPARE				0x4808U
+-#define PPI_RW_DPHY_LANE3_LBERT_0			0x4c00U
+-#define PPI_RW_DPHY_LANE3_LBERT_1			0x4c02U
+-#define PPI_R_DPHY_LANE3_LBERT_0			0x4c04U
+-#define PPI_R_DPHY_LANE3_LBERT_1			0x4c06U
+-#define PPI_RW_DPHY_LANE3_SPARE				0x4c08U
+-#define CORE_DIG_DLANE_0_RW_CFG_0			0x6000U
+-#define CORE_DIG_DLANE_0_RW_CFG_1			0x6002U
+-#define CORE_DIG_DLANE_0_RW_CFG_2			0x6004U
+-#define CORE_DIG_DLANE_0_RW_LP_0			0x6080U
+-#define CORE_DIG_DLANE_0_RW_LP_1			0x6082U
+-#define CORE_DIG_DLANE_0_RW_LP_2			0x6084U
+-#define CORE_DIG_DLANE_0_R_LP_0				0x60a0U
+-#define CORE_DIG_DLANE_0_R_LP_1				0x60a2U
+-#define CORE_DIG_DLANE_0_R_HS_TX_0			0x60e0U
+-#define CORE_DIG_DLANE_0_RW_HS_RX_0			0x6100U
+-#define CORE_DIG_DLANE_0_RW_HS_RX_1			0x6102U
+-#define CORE_DIG_DLANE_0_RW_HS_RX_2			0x6104U
+-#define CORE_DIG_DLANE_0_RW_HS_RX_3			0x6106U
+-#define CORE_DIG_DLANE_0_RW_HS_RX_4			0x6108U
+-#define CORE_DIG_DLANE_0_RW_HS_RX_5			0x610aU
+-#define CORE_DIG_DLANE_0_RW_HS_RX_6			0x610cU
+-#define CORE_DIG_DLANE_0_RW_HS_RX_7			0x610eU
+-#define CORE_DIG_DLANE_0_RW_HS_RX_8			0x6110U
+-#define CORE_DIG_DLANE_0_RW_HS_RX_9			0x6112U
+-#define CORE_DIG_DLANE_0_R_HS_RX_0			0x6120U
+-#define CORE_DIG_DLANE_0_R_HS_RX_1			0x6122U
+-#define CORE_DIG_DLANE_0_R_HS_RX_2			0x6124U
+-#define CORE_DIG_DLANE_0_R_HS_RX_3			0x6126U
+-#define CORE_DIG_DLANE_0_R_HS_RX_4			0x6128U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_0			0x6200U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_1			0x6202U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_2			0x6204U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_3			0x6206U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_4			0x6208U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_5			0x620aU
+-#define CORE_DIG_DLANE_0_RW_HS_TX_6			0x620cU
+-#define CORE_DIG_DLANE_0_RW_HS_TX_7			0x620eU
+-#define CORE_DIG_DLANE_0_RW_HS_TX_8			0x6210U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_9			0x6212U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_10			0x6214U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_11			0x6216U
+-#define CORE_DIG_DLANE_0_RW_HS_TX_12			0x6218U
+-#define CORE_DIG_DLANE_1_RW_CFG_0			0x6400U
+-#define CORE_DIG_DLANE_1_RW_CFG_1			0x6402U
+-#define CORE_DIG_DLANE_1_RW_CFG_2			0x6404U
+-#define CORE_DIG_DLANE_1_RW_LP_0			0x6480U
+-#define CORE_DIG_DLANE_1_RW_LP_1			0x6482U
+-#define CORE_DIG_DLANE_1_RW_LP_2			0x6484U
+-#define CORE_DIG_DLANE_1_R_LP_0				0x64a0U
+-#define CORE_DIG_DLANE_1_R_LP_1				0x64a2U
+-#define CORE_DIG_DLANE_1_R_HS_TX_0			0x64e0U
+-#define CORE_DIG_DLANE_1_RW_HS_RX_0			0x6500U
+-#define CORE_DIG_DLANE_1_RW_HS_RX_1			0x6502U
+-#define CORE_DIG_DLANE_1_RW_HS_RX_2			0x6504U
+-#define CORE_DIG_DLANE_1_RW_HS_RX_3			0x6506U
+-#define CORE_DIG_DLANE_1_RW_HS_RX_4			0x6508U
+-#define CORE_DIG_DLANE_1_RW_HS_RX_5			0x650aU
+-#define CORE_DIG_DLANE_1_RW_HS_RX_6			0x650cU
+-#define CORE_DIG_DLANE_1_RW_HS_RX_7			0x650eU
+-#define CORE_DIG_DLANE_1_RW_HS_RX_8			0x6510U
+-#define CORE_DIG_DLANE_1_RW_HS_RX_9			0x6512U
+-#define CORE_DIG_DLANE_1_R_HS_RX_0			0x6520U
+-#define CORE_DIG_DLANE_1_R_HS_RX_1			0x6522U
+-#define CORE_DIG_DLANE_1_R_HS_RX_2			0x6524U
+-#define CORE_DIG_DLANE_1_R_HS_RX_3			0x6526U
+-#define CORE_DIG_DLANE_1_R_HS_RX_4			0x6528U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_0			0x6600U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_1			0x6602U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_2			0x6604U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_3			0x6606U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_4			0x6608U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_5			0x660aU
+-#define CORE_DIG_DLANE_1_RW_HS_TX_6			0x660cU
+-#define CORE_DIG_DLANE_1_RW_HS_TX_7			0x660eU
+-#define CORE_DIG_DLANE_1_RW_HS_TX_8			0x6610U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_9			0x6612U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_10			0x6614U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_11			0x6616U
+-#define CORE_DIG_DLANE_1_RW_HS_TX_12			0x6618U
+-#define CORE_DIG_DLANE_2_RW_CFG_0			0x6800U
+-#define CORE_DIG_DLANE_2_RW_CFG_1			0x6802U
+-#define CORE_DIG_DLANE_2_RW_CFG_2			0x6804U
+-#define CORE_DIG_DLANE_2_RW_LP_0			0x6880U
+-#define CORE_DIG_DLANE_2_RW_LP_1			0x6882U
+-#define CORE_DIG_DLANE_2_RW_LP_2			0x6884U
+-#define CORE_DIG_DLANE_2_R_LP_0				0x68a0U
+-#define CORE_DIG_DLANE_2_R_LP_1				0x68a2U
+-#define CORE_DIG_DLANE_2_R_HS_TX_0			0x68e0U
+-#define CORE_DIG_DLANE_2_RW_HS_RX_0			0x6900U
+-#define CORE_DIG_DLANE_2_RW_HS_RX_1			0x6902U
+-#define CORE_DIG_DLANE_2_RW_HS_RX_2			0x6904U
+-#define CORE_DIG_DLANE_2_RW_HS_RX_3			0x6906U
+-#define CORE_DIG_DLANE_2_RW_HS_RX_4			0x6908U
+-#define CORE_DIG_DLANE_2_RW_HS_RX_5			0x690aU
+-#define CORE_DIG_DLANE_2_RW_HS_RX_6			0x690cU
+-#define CORE_DIG_DLANE_2_RW_HS_RX_7			0x690eU
+-#define CORE_DIG_DLANE_2_RW_HS_RX_8			0x6910U
+-#define CORE_DIG_DLANE_2_RW_HS_RX_9			0x6912U
+-#define CORE_DIG_DLANE_2_R_HS_RX_0			0x6920U
+-#define CORE_DIG_DLANE_2_R_HS_RX_1			0x6922U
+-#define CORE_DIG_DLANE_2_R_HS_RX_2			0x6924U
+-#define CORE_DIG_DLANE_2_R_HS_RX_3			0x6926U
+-#define CORE_DIG_DLANE_2_R_HS_RX_4			0x6928U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_0			0x6a00U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_1			0x6a02U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_2			0x6a04U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_3			0x6a06U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_4			0x6a08U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_5			0x6a0aU
+-#define CORE_DIG_DLANE_2_RW_HS_TX_6			0x6a0cU
+-#define CORE_DIG_DLANE_2_RW_HS_TX_7			0x6a0eU
+-#define CORE_DIG_DLANE_2_RW_HS_TX_8			0x6a10U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_9			0x6a12U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_10			0x6a14U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_11			0x6a16U
+-#define CORE_DIG_DLANE_2_RW_HS_TX_12			0x6a18U
+-#define CORE_DIG_DLANE_3_RW_CFG_0			0x6c00U
+-#define CORE_DIG_DLANE_3_RW_CFG_1			0x6c02U
+-#define CORE_DIG_DLANE_3_RW_CFG_2			0x6c04U
+-#define CORE_DIG_DLANE_3_RW_LP_0			0x6c80U
+-#define CORE_DIG_DLANE_3_RW_LP_1			0x6c82U
+-#define CORE_DIG_DLANE_3_RW_LP_2			0x6c84U
+-#define CORE_DIG_DLANE_3_R_LP_0				0x6ca0U
+-#define CORE_DIG_DLANE_3_R_LP_1				0x6ca2U
+-#define CORE_DIG_DLANE_3_R_HS_TX_0			0x6ce0U
+-#define CORE_DIG_DLANE_3_RW_HS_RX_0			0x6d00U
+-#define CORE_DIG_DLANE_3_RW_HS_RX_1			0x6d02U
+-#define CORE_DIG_DLANE_3_RW_HS_RX_2			0x6d04U
+-#define CORE_DIG_DLANE_3_RW_HS_RX_3			0x6d06U
+-#define CORE_DIG_DLANE_3_RW_HS_RX_4			0x6d08U
+-#define CORE_DIG_DLANE_3_RW_HS_RX_5			0x6d0aU
+-#define CORE_DIG_DLANE_3_RW_HS_RX_6			0x6d0cU
+-#define CORE_DIG_DLANE_3_RW_HS_RX_7			0x6d0eU
+-#define CORE_DIG_DLANE_3_RW_HS_RX_8			0x6d10U
+-#define CORE_DIG_DLANE_3_RW_HS_RX_9			0x6d12U
+-#define CORE_DIG_DLANE_3_R_HS_RX_0			0x6d20U
+-#define CORE_DIG_DLANE_3_R_HS_RX_1			0x6d22U
+-#define CORE_DIG_DLANE_3_R_HS_RX_2			0x6d24U
+-#define CORE_DIG_DLANE_3_R_HS_RX_3			0x6d26U
+-#define CORE_DIG_DLANE_3_R_HS_RX_4			0x6d28U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_0			0x6e00U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_1			0x6e02U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_2			0x6e04U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_3			0x6e06U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_4			0x6e08U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_5			0x6e0aU
+-#define CORE_DIG_DLANE_3_RW_HS_TX_6			0x6e0cU
+-#define CORE_DIG_DLANE_3_RW_HS_TX_7			0x6e0eU
+-#define CORE_DIG_DLANE_3_RW_HS_TX_8			0x6e10U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_9			0x6e12U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_10			0x6e14U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_11			0x6e16U
+-#define CORE_DIG_DLANE_3_RW_HS_TX_12			0x6e18U
+-#define CORE_DIG_DLANE_CLK_RW_CFG_0			0x7000U
+-#define CORE_DIG_DLANE_CLK_RW_CFG_1			0x7002U
+-#define CORE_DIG_DLANE_CLK_RW_CFG_2			0x7004U
+-#define CORE_DIG_DLANE_CLK_RW_LP_0			0x7080U
+-#define CORE_DIG_DLANE_CLK_RW_LP_1			0x7082U
+-#define CORE_DIG_DLANE_CLK_RW_LP_2			0x7084U
+-#define CORE_DIG_DLANE_CLK_R_LP_0			0x70a0U
+-#define CORE_DIG_DLANE_CLK_R_LP_1			0x70a2U
+-#define CORE_DIG_DLANE_CLK_R_HS_TX_0			0x70e0U
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_0			0x7100U
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_1			0x7102U
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_2			0x7104U
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_3			0x7106U
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_4			0x7108U
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_5			0x710aU
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_6			0x710cU
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_7			0x710eU
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_8			0x7110U
+-#define CORE_DIG_DLANE_CLK_RW_HS_RX_9			0x7112U
+-#define CORE_DIG_DLANE_CLK_R_HS_RX_0			0x7120U
+-#define CORE_DIG_DLANE_CLK_R_HS_RX_1			0x7122U
+-#define CORE_DIG_DLANE_CLK_R_HS_RX_2			0x7124U
+-#define CORE_DIG_DLANE_CLK_R_HS_RX_3			0x7126U
+-#define CORE_DIG_DLANE_CLK_R_HS_RX_4			0x7128U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_0			0x7200U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_1			0x7202U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_2			0x7204U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_3			0x7206U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_4			0x7208U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_5			0x720aU
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_6			0x720cU
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_7			0x720eU
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_8			0x7210U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_9			0x7212U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_10			0x7214U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_11			0x7216U
+-#define CORE_DIG_DLANE_CLK_RW_HS_TX_12			0x7218U
+-#define PPI_RW_CPHY_TRIO0_LBERT_0			0x8000U
+-#define PPI_RW_CPHY_TRIO0_LBERT_1			0x8002U
+-#define PPI_R_CPHY_TRIO0_LBERT_0			0x8004U
+-#define PPI_R_CPHY_TRIO0_LBERT_1			0x8006U
+-#define PPI_RW_CPHY_TRIO0_SPARE				0x8008U
+-#define PPI_RW_CPHY_TRIO1_LBERT_0			0x8400U
+-#define PPI_RW_CPHY_TRIO1_LBERT_1			0x8402U
+-#define PPI_R_CPHY_TRIO1_LBERT_0			0x8404U
+-#define PPI_R_CPHY_TRIO1_LBERT_1			0x8406U
+-#define PPI_RW_CPHY_TRIO1_SPARE				0x8408U
+-#define PPI_RW_CPHY_TRIO2_LBERT_0			0x8800U
+-#define PPI_RW_CPHY_TRIO2_LBERT_1			0x8802U
+-#define PPI_R_CPHY_TRIO2_LBERT_0			0x8804U
+-#define PPI_R_CPHY_TRIO2_LBERT_1			0x8806U
+-#define PPI_RW_CPHY_TRIO2_SPARE				0x8808U
+-#define CORE_DIG_CLANE_0_RW_CFG_0			0xa000U
+-#define CORE_DIG_CLANE_0_RW_CFG_2			0xa004U
+-#define CORE_DIG_CLANE_0_RW_LP_0			0xa080U
+-#define CORE_DIG_CLANE_0_RW_LP_1			0xa082U
+-#define CORE_DIG_CLANE_0_RW_LP_2			0xa084U
+-#define CORE_DIG_CLANE_0_R_LP_0				0xa0a0U
+-#define CORE_DIG_CLANE_0_R_LP_1				0xa0a2U
+-#define CORE_DIG_CLANE_0_RW_HS_RX_0			0xa100U
+-#define CORE_DIG_CLANE_0_RW_HS_RX_1			0xa102U
+-#define CORE_DIG_CLANE_0_RW_HS_RX_2			0xa104U
+-#define CORE_DIG_CLANE_0_RW_HS_RX_3			0xa106U
+-#define CORE_DIG_CLANE_0_RW_HS_RX_4			0xa108U
+-#define CORE_DIG_CLANE_0_RW_HS_RX_5			0xa10aU
+-#define CORE_DIG_CLANE_0_RW_HS_RX_6			0xa10cU
+-#define CORE_DIG_CLANE_0_R_RX_0				0xa120U
+-#define CORE_DIG_CLANE_0_R_RX_1				0xa122U
+-#define CORE_DIG_CLANE_0_R_TX_0				0xa124U
+-#define CORE_DIG_CLANE_0_R_RX_2				0xa126U
+-#define CORE_DIG_CLANE_0_R_RX_3				0xa128U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_0			0xa200U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_1			0xa202U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_2			0xa204U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_3			0xa206U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_4			0xa208U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_5			0xa20aU
+-#define CORE_DIG_CLANE_0_RW_HS_TX_6			0xa20cU
+-#define CORE_DIG_CLANE_0_RW_HS_TX_7			0xa20eU
+-#define CORE_DIG_CLANE_0_RW_HS_TX_8			0xa210U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_9			0xa212U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_10			0xa214U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_11			0xa216U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_12			0xa218U
+-#define CORE_DIG_CLANE_0_RW_HS_TX_13			0xa21aU
+-#define CORE_DIG_CLANE_1_RW_CFG_0			0xa400U
+-#define CORE_DIG_CLANE_1_RW_CFG_2			0xa404U
+-#define CORE_DIG_CLANE_1_RW_LP_0			0xa480U
+-#define CORE_DIG_CLANE_1_RW_LP_1			0xa482U
+-#define CORE_DIG_CLANE_1_RW_LP_2			0xa484U
+-#define CORE_DIG_CLANE_1_R_LP_0				0xa4a0U
+-#define CORE_DIG_CLANE_1_R_LP_1				0xa4a2U
+-#define CORE_DIG_CLANE_1_RW_HS_RX_0			0xa500U
+-#define CORE_DIG_CLANE_1_RW_HS_RX_1			0xa502U
+-#define CORE_DIG_CLANE_1_RW_HS_RX_2			0xa504U
+-#define CORE_DIG_CLANE_1_RW_HS_RX_3			0xa506U
+-#define CORE_DIG_CLANE_1_RW_HS_RX_4			0xa508U
+-#define CORE_DIG_CLANE_1_RW_HS_RX_5			0xa50aU
+-#define CORE_DIG_CLANE_1_RW_HS_RX_6			0xa50cU
+-#define CORE_DIG_CLANE_1_R_RX_0				0xa520U
+-#define CORE_DIG_CLANE_1_R_RX_1				0xa522U
+-#define CORE_DIG_CLANE_1_R_TX_0				0xa524U
+-#define CORE_DIG_CLANE_1_R_RX_2				0xa526U
+-#define CORE_DIG_CLANE_1_R_RX_3				0xa528U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_0			0xa600U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_1			0xa602U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_2			0xa604U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_3			0xa606U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_4			0xa608U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_5			0xa60aU
+-#define CORE_DIG_CLANE_1_RW_HS_TX_6			0xa60cU
+-#define CORE_DIG_CLANE_1_RW_HS_TX_7			0xa60eU
+-#define CORE_DIG_CLANE_1_RW_HS_TX_8			0xa610U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_9			0xa612U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_10			0xa614U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_11			0xa616U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_12			0xa618U
+-#define CORE_DIG_CLANE_1_RW_HS_TX_13			0xa61aU
+-#define CORE_DIG_CLANE_2_RW_CFG_0			0xa800U
+-#define CORE_DIG_CLANE_2_RW_CFG_2			0xa804U
+-#define CORE_DIG_CLANE_2_RW_LP_0			0xa880U
+-#define CORE_DIG_CLANE_2_RW_LP_1			0xa882U
+-#define CORE_DIG_CLANE_2_RW_LP_2			0xa884U
+-#define CORE_DIG_CLANE_2_R_LP_0				0xa8a0U
+-#define CORE_DIG_CLANE_2_R_LP_1				0xa8a2U
+-#define CORE_DIG_CLANE_2_RW_HS_RX_0			0xa900U
+-#define CORE_DIG_CLANE_2_RW_HS_RX_1			0xa902U
+-#define CORE_DIG_CLANE_2_RW_HS_RX_2			0xa904U
+-#define CORE_DIG_CLANE_2_RW_HS_RX_3			0xa906U
+-#define CORE_DIG_CLANE_2_RW_HS_RX_4			0xa908U
+-#define CORE_DIG_CLANE_2_RW_HS_RX_5			0xa90aU
+-#define CORE_DIG_CLANE_2_RW_HS_RX_6			0xa90cU
+-#define CORE_DIG_CLANE_2_R_RX_0				0xa920U
+-#define CORE_DIG_CLANE_2_R_RX_1				0xa922U
+-#define CORE_DIG_CLANE_2_R_TX_0				0xa924U
+-#define CORE_DIG_CLANE_2_R_RX_2				0xa926U
+-#define CORE_DIG_CLANE_2_R_RX_3				0xa928U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_0			0xaa00U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_1			0xaa02U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_2			0xaa04U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_3			0xaa06U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_4			0xaa08U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_5			0xaa0aU
+-#define CORE_DIG_CLANE_2_RW_HS_TX_6			0xaa0cU
+-#define CORE_DIG_CLANE_2_RW_HS_TX_7			0xaa0eU
+-#define CORE_DIG_CLANE_2_RW_HS_TX_8			0xaa10U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_9			0xaa12U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_10			0xaa14U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_11			0xaa16U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_12			0xaa18U
+-#define CORE_DIG_CLANE_2_RW_HS_TX_13			0xaa1aU
++#define IS_IO_CDPHY_BASE(i)			(IS_IO_BASE + 0x10000 * (i))
++#define PPI_STARTUP_RW_COMMON_DPHY_0			0x1800
++#define PPI_STARTUP_RW_COMMON_DPHY_1			0x1802
++#define PPI_STARTUP_RW_COMMON_DPHY_2			0x1804
++#define PPI_STARTUP_RW_COMMON_DPHY_3			0x1806
++#define PPI_STARTUP_RW_COMMON_DPHY_4			0x1808
++#define PPI_STARTUP_RW_COMMON_DPHY_5			0x180a
++#define PPI_STARTUP_RW_COMMON_DPHY_6			0x180c
++#define PPI_STARTUP_RW_COMMON_DPHY_7			0x180e
++#define PPI_STARTUP_RW_COMMON_DPHY_8			0x1810
++#define PPI_STARTUP_RW_COMMON_DPHY_9			0x1812
++#define PPI_STARTUP_RW_COMMON_DPHY_A			0x1814
++#define PPI_STARTUP_RW_COMMON_DPHY_10			0x1820
++#define PPI_STARTUP_RW_COMMON_STARTUP_1_1		0x1822
++#define PPI_STARTUP_RW_COMMON_STARTUP_1_2		0x1824
++#define PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_0		0x1840
++#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_1		0x1842
++#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_2		0x1844
++#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_3		0x1846
++#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_4		0x1848
++#define PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_5		0x184a
++#define PPI_CALIBCTRL_RW_COMMON_BG_0			0x184c
++#define PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_7		0x184e
++#define PPI_CALIBCTRL_RW_ADC_CFG_0			0x1850
++#define PPI_CALIBCTRL_RW_ADC_CFG_1			0x1852
++#define PPI_CALIBCTRL_R_ADC_DEBUG			0x1854
++#define PPI_RW_LPDCOCAL_TOP_OVERRIDE			0x1c00
++#define PPI_RW_LPDCOCAL_TIMEBASE			0x1c02
++#define PPI_RW_LPDCOCAL_NREF				0x1c04
++#define PPI_RW_LPDCOCAL_NREF_RANGE			0x1c06
++#define PPI_RW_LPDCOCAL_NREF_TRIGGER_MAN		0x1c08
++#define PPI_RW_LPDCOCAL_TWAIT_CONFIG			0x1c0a
++#define PPI_RW_LPDCOCAL_VT_CONFIG			0x1c0c
++#define PPI_R_LPDCOCAL_DEBUG_RB				0x1c0e
++#define PPI_RW_LPDCOCAL_COARSE_CFG			0x1c10
++#define PPI_R_LPDCOCAL_DEBUG_COARSE_RB			0x1c12
++#define PPI_R_LPDCOCAL_DEBUG_COARSE_MEAS_0_RB		0x1c14
++#define PPI_R_LPDCOCAL_DEBUG_COARSE_MEAS_1_RB		0x1c16
++#define PPI_R_LPDCOCAL_DEBUG_COARSE_FWORD_RB		0x1c18
++#define PPI_R_LPDCOCAL_DEBUG_MEASURE_CURR_ERROR		0x1c1a
++#define PPI_R_LPDCOCAL_DEBUG_MEASURE_LAST_ERROR		0x1c1c
++#define PPI_R_LPDCOCAL_DEBUG_VT				0x1c1e
++#define PPI_RW_LB_TIMEBASE_CONFIG			0x1c20
++#define PPI_RW_LB_STARTCMU_CONFIG			0x1c22
++#define PPI_R_LBPULSE_COUNTER_RB			0x1c24
++#define PPI_R_LB_START_CMU_RB				0x1c26
++#define PPI_RW_LB_DPHY_BURST_START			0x1c28
++#define PPI_RW_LB_CPHY_BURST_START			0x1c2a
++#define PPI_RW_DDLCAL_CFG_0				0x1c40
++#define PPI_RW_DDLCAL_CFG_1				0x1c42
++#define PPI_RW_DDLCAL_CFG_2				0x1c44
++#define PPI_RW_DDLCAL_CFG_3				0x1c46
++#define PPI_RW_DDLCAL_CFG_4				0x1c48
++#define PPI_RW_DDLCAL_CFG_5				0x1c4a
++#define PPI_RW_DDLCAL_CFG_6				0x1c4c
++#define PPI_RW_DDLCAL_CFG_7				0x1c4e
++#define PPI_R_DDLCAL_DEBUG_0				0x1c50
++#define PPI_R_DDLCAL_DEBUG_1				0x1c52
++#define PPI_RW_PARITY_TEST				0x1c60
++#define PPI_RW_STARTUP_OVR_0				0x1c62
++#define PPI_RW_STARTUP_STATE_OVR_1			0x1c64
++#define PPI_RW_DTB_SELECTOR				0x1c66
++#define PPI_RW_DPHY_CLK_SPARE				0x1c6a
++#define PPI_RW_COMMON_CFG				0x1c6c
++#define PPI_RW_TERMCAL_CFG_0				0x1c80
++#define PPI_R_TERMCAL_DEBUG_0				0x1c82
++#define PPI_RW_TERMCAL_CTRL_0				0x1c84
++#define PPI_RW_OFFSETCAL_CFG_0				0x1ca0
++#define PPI_R_OFFSETCAL_DEBUG_LANE0			0x1ca2
++#define PPI_R_OFFSETCAL_DEBUG_LANE1			0x1ca4
++#define PPI_R_OFFSETCAL_DEBUG_LANE2			0x1ca6
++#define PPI_R_OFFSETCAL_DEBUG_LANE3			0x1ca8
++#define PPI_R_OFFSETCAL_DEBUG_LANE4			0x1caa
++#define PPI_RW_HSDCOCAL_CFG_O				0x1d00
++#define PPI_RW_HSDCOCAL_CFG_1				0x1d02
++#define PPI_RW_HSDCOCAL_CFG_2				0x1d04
++#define PPI_RW_HSDCOCAL_CFG_3				0x1d06
++#define PPI_RW_HSDCOCAL_CFG_4				0x1d08
++#define PPI_RW_HSDCOCAL_CFG_5				0x1d0a
++#define PPI_RW_HSDCOCAL_CFG_6				0x1d0c
++#define PPI_RW_HSDCOCAL_CFG_7				0x1d0e
++#define PPI_RW_HSDCOCAL_CFG_8				0x1d10
++#define PPI_R_HSDCOCAL_DEBUG_RB				0x1d12
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_0	0x2000
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_1	0x2002
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_2	0x2004
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_3	0x2006
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_4	0x2008
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_5	0x200a
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_6	0x200c
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_7	0x200e
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE0_OVR_0_8	0x2010
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_9	0x2012
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_10	0x2014
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_11	0x2016
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_12	0x2018
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_13	0x201a
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_14	0x201c
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE0_OVR_0_15	0x201e
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_0	0x2020
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_1	0x2022
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_2	0x2024
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_3	0x2026
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_4	0x2028
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_5	0x202a
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_6	0x202c
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_7	0x202e
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_8	0x2030
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_1_9	0x2032
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_10	0x2034
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_11	0x2036
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_12	0x2038
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_13	0x203a
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_14	0x203c
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_1_15	0x203e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_0		0x2040
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_1		0x2042
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_2		0x2044
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_3		0x2046
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_4		0x2048
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_5		0x204a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_6		0x204c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_7		0x204e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_8		0x2050
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_9		0x2052
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_10		0x2054
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_11		0x2056
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_12		0x2058
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_13		0x205a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_14		0x205c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_15		0x205e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_0		0x2060
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_1		0x2062
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_2		0x2064
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_3		0x2066
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_4		0x2068
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_5		0x206a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_6		0x206c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3_7		0x206e
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_8		0x2070
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_9		0x2072
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_10		0x2074
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_11		0x2076
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_12		0x2078
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_13		0x207a
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_14		0x207c
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_3_15		0x207e
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_0		0x2080
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_1		0x2082
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_2		0x2084
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_3		0x2086
++#define CORE_DIG_IOCTRL_R_AFE_LANE0_CTRL_4_4		0x2088
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_5_0	0x20a0
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_5_1	0x20a2
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_5_2	0x20a4
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE0_OVR_5_3	0x20a6
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE0_OVR_5_4	0x20a8
++#define CORE_DIG_RW_TRIO0_0				0x2100
++#define CORE_DIG_RW_TRIO0_1				0x2102
++#define CORE_DIG_RW_TRIO0_2				0x2104
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_0	0x2400
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_1	0x2402
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_2	0x2404
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_3	0x2406
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_4	0x2408
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_5	0x240a
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_6	0x240c
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_7	0x240e
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE1_OVR_0_8	0x2410
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_9	0x2412
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_10	0x2414
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_11	0x2416
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_12	0x2418
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_13	0x241a
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_14	0x241c
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE1_OVR_0_15	0x241e
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_0	0x2420
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_1	0x2422
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_2	0x2424
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_3	0x2426
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_4	0x2428
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_5	0x242a
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_6	0x242c
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_7	0x242e
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_8	0x2430
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_1_9	0x2432
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_10	0x2434
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_11	0x2436
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_12	0x2438
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_13	0x243a
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_14	0x243c
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_1_15	0x243e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_0		0x2440
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_1		0x2442
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_2		0x2444
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_3		0x2446
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_4		0x2448
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_5		0x244a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_6		0x244c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_7		0x244e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_8		0x2450
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_9		0x2452
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_10		0x2454
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_11		0x2456
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_12		0x2458
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_13		0x245a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_14		0x245c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_15		0x245e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_0		0x2460
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_1		0x2462
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_2		0x2464
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_3		0x2466
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_4		0x2468
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_5		0x246a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_6		0x246c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3_7		0x246e
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_8		0x2470
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_9		0x2472
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_10		0x2474
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_11		0x2476
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_12		0x2478
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_13		0x247a
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_14		0x247c
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_3_15		0x247e
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_0		0x2480
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_1		0x2482
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_2		0x2484
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_3		0x2486
++#define CORE_DIG_IOCTRL_R_AFE_LANE1_CTRL_4_4		0x2488
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_5_0	0x24a0
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_5_1	0x24a2
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_5_2	0x24a4
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE1_OVR_5_3	0x24a6
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE1_OVR_5_4	0x24a8
++#define CORE_DIG_RW_TRIO1_0				0x2500
++#define CORE_DIG_RW_TRIO1_1				0x2502
++#define CORE_DIG_RW_TRIO1_2				0x2504
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_0	0x2800
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_1	0x2802
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_2	0x2804
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_3	0x2806
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_4	0x2808
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_5	0x280a
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_6	0x280c
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_7	0x280e
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE2_OVR_0_8	0x2810
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_9	0x2812
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_10	0x2814
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_11	0x2816
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_12	0x2818
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_13	0x281a
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_14	0x281c
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE2_OVR_0_15	0x281e
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_0	0x2820
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_1	0x2822
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_2	0x2824
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_3	0x2826
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_4	0x2828
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_5	0x282a
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_6	0x282c
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_7	0x282e
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_8	0x2830
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_1_9	0x2832
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_10	0x2834
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_11	0x2836
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_12	0x2838
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_13	0x283a
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_14	0x283c
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_1_15	0x283e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_0		0x2840
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_1		0x2842
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_2		0x2844
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_3		0x2846
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_4		0x2848
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_5		0x284a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_6		0x284c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_7		0x284e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_8		0x2850
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_9		0x2852
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_10		0x2854
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_11		0x2856
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_12		0x2858
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_13		0x285a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_14		0x285c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_15		0x285e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_0		0x2860
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_1		0x2862
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_2		0x2864
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_3		0x2866
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_4		0x2868
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_5		0x286a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_6		0x286c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3_7		0x286e
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_8		0x2870
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_9		0x2872
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_10		0x2874
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_11		0x2876
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_12		0x2878
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_13		0x287a
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_14		0x287c
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_3_15		0x287e
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_0		0x2880
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_1		0x2882
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_2		0x2884
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_3		0x2886
++#define CORE_DIG_IOCTRL_R_AFE_LANE2_CTRL_4_4		0x2888
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_5_0	0x28a0
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_5_1	0x28a2
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_5_2	0x28a4
++#define CORE_DIG_IOCTRL_RW_CPHY_PPI_LANE2_OVR_5_3	0x28a6
++#define CORE_DIG_IOCTRL_R_CPHY_PPI_LANE2_OVR_5_4	0x28a8
++#define CORE_DIG_RW_TRIO2_0				0x2900
++#define CORE_DIG_RW_TRIO2_1				0x2902
++#define CORE_DIG_RW_TRIO2_2				0x2904
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_0	0x2c00
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_1	0x2c02
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_2	0x2c04
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_3	0x2c06
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_4	0x2c08
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_5	0x2c0a
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_6	0x2c0c
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_7	0x2c0e
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_LANE3_OVR_0_8	0x2c10
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_9	0x2c12
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_10	0x2c14
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_11	0x2c16
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_12	0x2c18
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_13	0x2c1a
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_14	0x2c1c
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_LANE3_OVR_0_15	0x2c1e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_0		0x2c40
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_1		0x2c42
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_2		0x2c44
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_3		0x2c46
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_4		0x2c48
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_5		0x2c4a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_6		0x2c4c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_7		0x2c4e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_8		0x2c50
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_9		0x2c52
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_10		0x2c54
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_11		0x2c56
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_12		0x2c58
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_13		0x2c5a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_14		0x2c5c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_15		0x2c5e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_0		0x2c60
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_1		0x2c62
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_2		0x2c64
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_3		0x2c66
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_4		0x2c68
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_5		0x2c6a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_6		0x2c6c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_3_7		0x2c6e
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_8		0x2c70
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_9		0x2c72
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_10		0x2c74
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_11		0x2c76
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_12		0x2c78
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_13		0x2c7a
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_14		0x2c7c
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_3_15		0x2c7e
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_0		0x2c80
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_1		0x2c82
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_2		0x2c84
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_3		0x2c86
++#define CORE_DIG_IOCTRL_R_AFE_LANE3_CTRL_4_4		0x2c88
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_0		0x3040
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_1		0x3042
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_2		0x3044
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_3		0x3046
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_4		0x3048
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_5		0x304a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_6		0x304c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_7		0x304e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_8		0x3050
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_9		0x3052
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_10		0x3054
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_11		0x3056
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_12		0x3058
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_13		0x305a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_14		0x305c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_15		0x305e
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_0		0x3060
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_1		0x3062
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_2		0x3064
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_3		0x3066
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_4		0x3068
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_5		0x306a
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_6		0x306c
++#define CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_3_7		0x306e
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_8		0x3070
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_9		0x3072
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_10		0x3074
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_11		0x3076
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_12		0x3078
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_13		0x307a
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_14		0x307c
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_3_15		0x307e
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_0		0x3080
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_1		0x3082
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_2		0x3084
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_3		0x3086
++#define CORE_DIG_IOCTRL_R_AFE_LANE4_CTRL_4_4		0x3088
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_CLK_OVR_0_0		0x3400
++#define CORE_DIG_IOCTRL_RW_DPHY_PPI_CLK_OVR_0_1		0x3402
++#define CORE_DIG_IOCTRL_R_DPHY_PPI_CLK_OVR_0_2		0x3404
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_0		0x3800
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_1		0x3802
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_2		0x3804
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_3		0x3806
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_4		0x3808
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_5		0x380a
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_6		0x380c
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_7		0x380e
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_8		0x3810
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_9		0x3812
++#define CORE_DIG_IOCTRL_RW_COMMON_PPI_OVR_0_10		0x3814
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_11		0x3816
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_12		0x3818
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_13		0x381a
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_14		0x381c
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_0_15		0x381e
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_0		0x3820
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_1		0x3822
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_2		0x3824
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_3		0x3826
++#define CORE_DIG_IOCTRL_R_COMMON_PPI_OVR_1_4		0x3828
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_0		0x3840
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_1		0x3842
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_2		0x3844
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_3		0x3846
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_4		0x3848
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_5		0x384a
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_6		0x384c
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_7		0x384e
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_8		0x3850
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_9		0x3852
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_10		0x3854
++#define CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_11		0x3856
++#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_2_12		0x3858
++#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_2_13		0x385a
++#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_2_14		0x385c
++#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_2_15		0x385e
++#define CORE_DIG_IOCTRL_R_AFE_CB_CTRL_3_0		0x3860
++#define CORE_DIG_RW_COMMON_0				0x3880
++#define CORE_DIG_RW_COMMON_1				0x3882
++#define CORE_DIG_RW_COMMON_2				0x3884
++#define CORE_DIG_RW_COMMON_3				0x3886
++#define CORE_DIG_RW_COMMON_4				0x3888
++#define CORE_DIG_RW_COMMON_5				0x388a
++#define CORE_DIG_RW_COMMON_6				0x388c
++#define CORE_DIG_RW_COMMON_7				0x388e
++#define CORE_DIG_RW_COMMON_8				0x3890
++#define CORE_DIG_RW_COMMON_9				0x3892
++#define CORE_DIG_RW_COMMON_10				0x3894
++#define CORE_DIG_RW_COMMON_11				0x3896
++#define CORE_DIG_RW_COMMON_12				0x3898
++#define CORE_DIG_RW_COMMON_13				0x389a
++#define CORE_DIG_RW_COMMON_14				0x389c
++#define CORE_DIG_RW_COMMON_15				0x389e
++#define CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_0		0x39e0
++#define CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_1		0x39e2
++#define CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_2		0x39e4
++#define CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_3		0x39e6
++#define CORE_DIG_COMMON_RW_DESKEW_FINE_MEM		0x3fe0
++#define CORE_DIG_COMMON_R_DESKEW_FINE_MEM		0x3fe2
++#define PPI_RW_DPHY_LANE0_LBERT_0			0x4000
++#define PPI_RW_DPHY_LANE0_LBERT_1			0x4002
++#define PPI_R_DPHY_LANE0_LBERT_0			0x4004
++#define PPI_R_DPHY_LANE0_LBERT_1			0x4006
++#define PPI_RW_DPHY_LANE0_SPARE				0x4008
++#define PPI_RW_DPHY_LANE1_LBERT_0			0x4400
++#define PPI_RW_DPHY_LANE1_LBERT_1			0x4402
++#define PPI_R_DPHY_LANE1_LBERT_0			0x4404
++#define PPI_R_DPHY_LANE1_LBERT_1			0x4406
++#define PPI_RW_DPHY_LANE1_SPARE				0x4408
++#define PPI_RW_DPHY_LANE2_LBERT_0			0x4800
++#define PPI_RW_DPHY_LANE2_LBERT_1			0x4802
++#define PPI_R_DPHY_LANE2_LBERT_0			0x4804
++#define PPI_R_DPHY_LANE2_LBERT_1			0x4806
++#define PPI_RW_DPHY_LANE2_SPARE				0x4808
++#define PPI_RW_DPHY_LANE3_LBERT_0			0x4c00
++#define PPI_RW_DPHY_LANE3_LBERT_1			0x4c02
++#define PPI_R_DPHY_LANE3_LBERT_0			0x4c04
++#define PPI_R_DPHY_LANE3_LBERT_1			0x4c06
++#define PPI_RW_DPHY_LANE3_SPARE				0x4c08
++#define CORE_DIG_DLANE_0_RW_CFG_0			0x6000
++#define CORE_DIG_DLANE_0_RW_CFG_1			0x6002
++#define CORE_DIG_DLANE_0_RW_CFG_2			0x6004
++#define CORE_DIG_DLANE_0_RW_LP_0			0x6080
++#define CORE_DIG_DLANE_0_RW_LP_1			0x6082
++#define CORE_DIG_DLANE_0_RW_LP_2			0x6084
++#define CORE_DIG_DLANE_0_R_LP_0				0x60a0
++#define CORE_DIG_DLANE_0_R_LP_1				0x60a2
++#define CORE_DIG_DLANE_0_R_HS_TX_0			0x60e0
++#define CORE_DIG_DLANE_0_RW_HS_RX_0			0x6100
++#define CORE_DIG_DLANE_0_RW_HS_RX_1			0x6102
++#define CORE_DIG_DLANE_0_RW_HS_RX_2			0x6104
++#define CORE_DIG_DLANE_0_RW_HS_RX_3			0x6106
++#define CORE_DIG_DLANE_0_RW_HS_RX_4			0x6108
++#define CORE_DIG_DLANE_0_RW_HS_RX_5			0x610a
++#define CORE_DIG_DLANE_0_RW_HS_RX_6			0x610c
++#define CORE_DIG_DLANE_0_RW_HS_RX_7			0x610e
++#define CORE_DIG_DLANE_0_RW_HS_RX_8			0x6110
++#define CORE_DIG_DLANE_0_RW_HS_RX_9			0x6112
++#define CORE_DIG_DLANE_0_R_HS_RX_0			0x6120
++#define CORE_DIG_DLANE_0_R_HS_RX_1			0x6122
++#define CORE_DIG_DLANE_0_R_HS_RX_2			0x6124
++#define CORE_DIG_DLANE_0_R_HS_RX_3			0x6126
++#define CORE_DIG_DLANE_0_R_HS_RX_4			0x6128
++#define CORE_DIG_DLANE_0_RW_HS_TX_0			0x6200
++#define CORE_DIG_DLANE_0_RW_HS_TX_1			0x6202
++#define CORE_DIG_DLANE_0_RW_HS_TX_2			0x6204
++#define CORE_DIG_DLANE_0_RW_HS_TX_3			0x6206
++#define CORE_DIG_DLANE_0_RW_HS_TX_4			0x6208
++#define CORE_DIG_DLANE_0_RW_HS_TX_5			0x620a
++#define CORE_DIG_DLANE_0_RW_HS_TX_6			0x620c
++#define CORE_DIG_DLANE_0_RW_HS_TX_7			0x620e
++#define CORE_DIG_DLANE_0_RW_HS_TX_8			0x6210
++#define CORE_DIG_DLANE_0_RW_HS_TX_9			0x6212
++#define CORE_DIG_DLANE_0_RW_HS_TX_10			0x6214
++#define CORE_DIG_DLANE_0_RW_HS_TX_11			0x6216
++#define CORE_DIG_DLANE_0_RW_HS_TX_12			0x6218
++#define CORE_DIG_DLANE_1_RW_CFG_0			0x6400
++#define CORE_DIG_DLANE_1_RW_CFG_1			0x6402
++#define CORE_DIG_DLANE_1_RW_CFG_2			0x6404
++#define CORE_DIG_DLANE_1_RW_LP_0			0x6480
++#define CORE_DIG_DLANE_1_RW_LP_1			0x6482
++#define CORE_DIG_DLANE_1_RW_LP_2			0x6484
++#define CORE_DIG_DLANE_1_R_LP_0				0x64a0
++#define CORE_DIG_DLANE_1_R_LP_1				0x64a2
++#define CORE_DIG_DLANE_1_R_HS_TX_0			0x64e0
++#define CORE_DIG_DLANE_1_RW_HS_RX_0			0x6500
++#define CORE_DIG_DLANE_1_RW_HS_RX_1			0x6502
++#define CORE_DIG_DLANE_1_RW_HS_RX_2			0x6504
++#define CORE_DIG_DLANE_1_RW_HS_RX_3			0x6506
++#define CORE_DIG_DLANE_1_RW_HS_RX_4			0x6508
++#define CORE_DIG_DLANE_1_RW_HS_RX_5			0x650a
++#define CORE_DIG_DLANE_1_RW_HS_RX_6			0x650c
++#define CORE_DIG_DLANE_1_RW_HS_RX_7			0x650e
++#define CORE_DIG_DLANE_1_RW_HS_RX_8			0x6510
++#define CORE_DIG_DLANE_1_RW_HS_RX_9			0x6512
++#define CORE_DIG_DLANE_1_R_HS_RX_0			0x6520
++#define CORE_DIG_DLANE_1_R_HS_RX_1			0x6522
++#define CORE_DIG_DLANE_1_R_HS_RX_2			0x6524
++#define CORE_DIG_DLANE_1_R_HS_RX_3			0x6526
++#define CORE_DIG_DLANE_1_R_HS_RX_4			0x6528
++#define CORE_DIG_DLANE_1_RW_HS_TX_0			0x6600
++#define CORE_DIG_DLANE_1_RW_HS_TX_1			0x6602
++#define CORE_DIG_DLANE_1_RW_HS_TX_2			0x6604
++#define CORE_DIG_DLANE_1_RW_HS_TX_3			0x6606
++#define CORE_DIG_DLANE_1_RW_HS_TX_4			0x6608
++#define CORE_DIG_DLANE_1_RW_HS_TX_5			0x660a
++#define CORE_DIG_DLANE_1_RW_HS_TX_6			0x660c
++#define CORE_DIG_DLANE_1_RW_HS_TX_7			0x660e
++#define CORE_DIG_DLANE_1_RW_HS_TX_8			0x6610
++#define CORE_DIG_DLANE_1_RW_HS_TX_9			0x6612
++#define CORE_DIG_DLANE_1_RW_HS_TX_10			0x6614
++#define CORE_DIG_DLANE_1_RW_HS_TX_11			0x6616
++#define CORE_DIG_DLANE_1_RW_HS_TX_12			0x6618
++#define CORE_DIG_DLANE_2_RW_CFG_0			0x6800
++#define CORE_DIG_DLANE_2_RW_CFG_1			0x6802
++#define CORE_DIG_DLANE_2_RW_CFG_2			0x6804
++#define CORE_DIG_DLANE_2_RW_LP_0			0x6880
++#define CORE_DIG_DLANE_2_RW_LP_1			0x6882
++#define CORE_DIG_DLANE_2_RW_LP_2			0x6884
++#define CORE_DIG_DLANE_2_R_LP_0				0x68a0
++#define CORE_DIG_DLANE_2_R_LP_1				0x68a2
++#define CORE_DIG_DLANE_2_R_HS_TX_0			0x68e0
++#define CORE_DIG_DLANE_2_RW_HS_RX_0			0x6900
++#define CORE_DIG_DLANE_2_RW_HS_RX_1			0x6902
++#define CORE_DIG_DLANE_2_RW_HS_RX_2			0x6904
++#define CORE_DIG_DLANE_2_RW_HS_RX_3			0x6906
++#define CORE_DIG_DLANE_2_RW_HS_RX_4			0x6908
++#define CORE_DIG_DLANE_2_RW_HS_RX_5			0x690a
++#define CORE_DIG_DLANE_2_RW_HS_RX_6			0x690c
++#define CORE_DIG_DLANE_2_RW_HS_RX_7			0x690e
++#define CORE_DIG_DLANE_2_RW_HS_RX_8			0x6910
++#define CORE_DIG_DLANE_2_RW_HS_RX_9			0x6912
++#define CORE_DIG_DLANE_2_R_HS_RX_0			0x6920
++#define CORE_DIG_DLANE_2_R_HS_RX_1			0x6922
++#define CORE_DIG_DLANE_2_R_HS_RX_2			0x6924
++#define CORE_DIG_DLANE_2_R_HS_RX_3			0x6926
++#define CORE_DIG_DLANE_2_R_HS_RX_4			0x6928
++#define CORE_DIG_DLANE_2_RW_HS_TX_0			0x6a00
++#define CORE_DIG_DLANE_2_RW_HS_TX_1			0x6a02
++#define CORE_DIG_DLANE_2_RW_HS_TX_2			0x6a04
++#define CORE_DIG_DLANE_2_RW_HS_TX_3			0x6a06
++#define CORE_DIG_DLANE_2_RW_HS_TX_4			0x6a08
++#define CORE_DIG_DLANE_2_RW_HS_TX_5			0x6a0a
++#define CORE_DIG_DLANE_2_RW_HS_TX_6			0x6a0c
++#define CORE_DIG_DLANE_2_RW_HS_TX_7			0x6a0e
++#define CORE_DIG_DLANE_2_RW_HS_TX_8			0x6a10
++#define CORE_DIG_DLANE_2_RW_HS_TX_9			0x6a12
++#define CORE_DIG_DLANE_2_RW_HS_TX_10			0x6a14
++#define CORE_DIG_DLANE_2_RW_HS_TX_11			0x6a16
++#define CORE_DIG_DLANE_2_RW_HS_TX_12			0x6a18
++#define CORE_DIG_DLANE_3_RW_CFG_0			0x6c00
++#define CORE_DIG_DLANE_3_RW_CFG_1			0x6c02
++#define CORE_DIG_DLANE_3_RW_CFG_2			0x6c04
++#define CORE_DIG_DLANE_3_RW_LP_0			0x6c80
++#define CORE_DIG_DLANE_3_RW_LP_1			0x6c82
++#define CORE_DIG_DLANE_3_RW_LP_2			0x6c84
++#define CORE_DIG_DLANE_3_R_LP_0				0x6ca0
++#define CORE_DIG_DLANE_3_R_LP_1				0x6ca2
++#define CORE_DIG_DLANE_3_R_HS_TX_0			0x6ce0
++#define CORE_DIG_DLANE_3_RW_HS_RX_0			0x6d00
++#define CORE_DIG_DLANE_3_RW_HS_RX_1			0x6d02
++#define CORE_DIG_DLANE_3_RW_HS_RX_2			0x6d04
++#define CORE_DIG_DLANE_3_RW_HS_RX_3			0x6d06
++#define CORE_DIG_DLANE_3_RW_HS_RX_4			0x6d08
++#define CORE_DIG_DLANE_3_RW_HS_RX_5			0x6d0a
++#define CORE_DIG_DLANE_3_RW_HS_RX_6			0x6d0c
++#define CORE_DIG_DLANE_3_RW_HS_RX_7			0x6d0e
++#define CORE_DIG_DLANE_3_RW_HS_RX_8			0x6d10
++#define CORE_DIG_DLANE_3_RW_HS_RX_9			0x6d12
++#define CORE_DIG_DLANE_3_R_HS_RX_0			0x6d20
++#define CORE_DIG_DLANE_3_R_HS_RX_1			0x6d22
++#define CORE_DIG_DLANE_3_R_HS_RX_2			0x6d24
++#define CORE_DIG_DLANE_3_R_HS_RX_3			0x6d26
++#define CORE_DIG_DLANE_3_R_HS_RX_4			0x6d28
++#define CORE_DIG_DLANE_3_RW_HS_TX_0			0x6e00
++#define CORE_DIG_DLANE_3_RW_HS_TX_1			0x6e02
++#define CORE_DIG_DLANE_3_RW_HS_TX_2			0x6e04
++#define CORE_DIG_DLANE_3_RW_HS_TX_3			0x6e06
++#define CORE_DIG_DLANE_3_RW_HS_TX_4			0x6e08
++#define CORE_DIG_DLANE_3_RW_HS_TX_5			0x6e0a
++#define CORE_DIG_DLANE_3_RW_HS_TX_6			0x6e0c
++#define CORE_DIG_DLANE_3_RW_HS_TX_7			0x6e0e
++#define CORE_DIG_DLANE_3_RW_HS_TX_8			0x6e10
++#define CORE_DIG_DLANE_3_RW_HS_TX_9			0x6e12
++#define CORE_DIG_DLANE_3_RW_HS_TX_10			0x6e14
++#define CORE_DIG_DLANE_3_RW_HS_TX_11			0x6e16
++#define CORE_DIG_DLANE_3_RW_HS_TX_12			0x6e18
++#define CORE_DIG_DLANE_CLK_RW_CFG_0			0x7000
++#define CORE_DIG_DLANE_CLK_RW_CFG_1			0x7002
++#define CORE_DIG_DLANE_CLK_RW_CFG_2			0x7004
++#define CORE_DIG_DLANE_CLK_RW_LP_0			0x7080
++#define CORE_DIG_DLANE_CLK_RW_LP_1			0x7082
++#define CORE_DIG_DLANE_CLK_RW_LP_2			0x7084
++#define CORE_DIG_DLANE_CLK_R_LP_0			0x70a0
++#define CORE_DIG_DLANE_CLK_R_LP_1			0x70a2
++#define CORE_DIG_DLANE_CLK_R_HS_TX_0			0x70e0
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_0			0x7100
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_1			0x7102
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_2			0x7104
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_3			0x7106
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_4			0x7108
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_5			0x710a
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_6			0x710c
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_7			0x710e
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_8			0x7110
++#define CORE_DIG_DLANE_CLK_RW_HS_RX_9			0x7112
++#define CORE_DIG_DLANE_CLK_R_HS_RX_0			0x7120
++#define CORE_DIG_DLANE_CLK_R_HS_RX_1			0x7122
++#define CORE_DIG_DLANE_CLK_R_HS_RX_2			0x7124
++#define CORE_DIG_DLANE_CLK_R_HS_RX_3			0x7126
++#define CORE_DIG_DLANE_CLK_R_HS_RX_4			0x7128
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_0			0x7200
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_1			0x7202
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_2			0x7204
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_3			0x7206
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_4			0x7208
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_5			0x720a
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_6			0x720c
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_7			0x720e
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_8			0x7210
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_9			0x7212
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_10			0x7214
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_11			0x7216
++#define CORE_DIG_DLANE_CLK_RW_HS_TX_12			0x7218
++#define PPI_RW_CPHY_TRIO0_LBERT_0			0x8000
++#define PPI_RW_CPHY_TRIO0_LBERT_1			0x8002
++#define PPI_R_CPHY_TRIO0_LBERT_0			0x8004
++#define PPI_R_CPHY_TRIO0_LBERT_1			0x8006
++#define PPI_RW_CPHY_TRIO0_SPARE				0x8008
++#define PPI_RW_CPHY_TRIO1_LBERT_0			0x8400
++#define PPI_RW_CPHY_TRIO1_LBERT_1			0x8402
++#define PPI_R_CPHY_TRIO1_LBERT_0			0x8404
++#define PPI_R_CPHY_TRIO1_LBERT_1			0x8406
++#define PPI_RW_CPHY_TRIO1_SPARE				0x8408
++#define PPI_RW_CPHY_TRIO2_LBERT_0			0x8800
++#define PPI_RW_CPHY_TRIO2_LBERT_1			0x8802
++#define PPI_R_CPHY_TRIO2_LBERT_0			0x8804
++#define PPI_R_CPHY_TRIO2_LBERT_1			0x8806
++#define PPI_RW_CPHY_TRIO2_SPARE				0x8808
++#define CORE_DIG_CLANE_0_RW_CFG_0			0xa000
++#define CORE_DIG_CLANE_0_RW_CFG_2			0xa004
++#define CORE_DIG_CLANE_0_RW_LP_0			0xa080
++#define CORE_DIG_CLANE_0_RW_LP_1			0xa082
++#define CORE_DIG_CLANE_0_RW_LP_2			0xa084
++#define CORE_DIG_CLANE_0_R_LP_0				0xa0a0
++#define CORE_DIG_CLANE_0_R_LP_1				0xa0a2
++#define CORE_DIG_CLANE_0_RW_HS_RX_0			0xa100
++#define CORE_DIG_CLANE_0_RW_HS_RX_1			0xa102
++#define CORE_DIG_CLANE_0_RW_HS_RX_2			0xa104
++#define CORE_DIG_CLANE_0_RW_HS_RX_3			0xa106
++#define CORE_DIG_CLANE_0_RW_HS_RX_4			0xa108
++#define CORE_DIG_CLANE_0_RW_HS_RX_5			0xa10a
++#define CORE_DIG_CLANE_0_RW_HS_RX_6			0xa10c
++#define CORE_DIG_CLANE_0_R_RX_0				0xa120
++#define CORE_DIG_CLANE_0_R_RX_1				0xa122
++#define CORE_DIG_CLANE_0_R_TX_0				0xa124
++#define CORE_DIG_CLANE_0_R_RX_2				0xa126
++#define CORE_DIG_CLANE_0_R_RX_3				0xa128
++#define CORE_DIG_CLANE_0_RW_HS_TX_0			0xa200
++#define CORE_DIG_CLANE_0_RW_HS_TX_1			0xa202
++#define CORE_DIG_CLANE_0_RW_HS_TX_2			0xa204
++#define CORE_DIG_CLANE_0_RW_HS_TX_3			0xa206
++#define CORE_DIG_CLANE_0_RW_HS_TX_4			0xa208
++#define CORE_DIG_CLANE_0_RW_HS_TX_5			0xa20a
++#define CORE_DIG_CLANE_0_RW_HS_TX_6			0xa20c
++#define CORE_DIG_CLANE_0_RW_HS_TX_7			0xa20e
++#define CORE_DIG_CLANE_0_RW_HS_TX_8			0xa210
++#define CORE_DIG_CLANE_0_RW_HS_TX_9			0xa212
++#define CORE_DIG_CLANE_0_RW_HS_TX_10			0xa214
++#define CORE_DIG_CLANE_0_RW_HS_TX_11			0xa216
++#define CORE_DIG_CLANE_0_RW_HS_TX_12			0xa218
++#define CORE_DIG_CLANE_0_RW_HS_TX_13			0xa21a
++#define CORE_DIG_CLANE_1_RW_CFG_0			0xa400
++#define CORE_DIG_CLANE_1_RW_CFG_2			0xa404
++#define CORE_DIG_CLANE_1_RW_LP_0			0xa480
++#define CORE_DIG_CLANE_1_RW_LP_1			0xa482
++#define CORE_DIG_CLANE_1_RW_LP_2			0xa484
++#define CORE_DIG_CLANE_1_R_LP_0				0xa4a0
++#define CORE_DIG_CLANE_1_R_LP_1				0xa4a2
++#define CORE_DIG_CLANE_1_RW_HS_RX_0			0xa500
++#define CORE_DIG_CLANE_1_RW_HS_RX_1			0xa502
++#define CORE_DIG_CLANE_1_RW_HS_RX_2			0xa504
++#define CORE_DIG_CLANE_1_RW_HS_RX_3			0xa506
++#define CORE_DIG_CLANE_1_RW_HS_RX_4			0xa508
++#define CORE_DIG_CLANE_1_RW_HS_RX_5			0xa50a
++#define CORE_DIG_CLANE_1_RW_HS_RX_6			0xa50c
++#define CORE_DIG_CLANE_1_R_RX_0				0xa520
++#define CORE_DIG_CLANE_1_R_RX_1				0xa522
++#define CORE_DIG_CLANE_1_R_TX_0				0xa524
++#define CORE_DIG_CLANE_1_R_RX_2				0xa526
++#define CORE_DIG_CLANE_1_R_RX_3				0xa528
++#define CORE_DIG_CLANE_1_RW_HS_TX_0			0xa600
++#define CORE_DIG_CLANE_1_RW_HS_TX_1			0xa602
++#define CORE_DIG_CLANE_1_RW_HS_TX_2			0xa604
++#define CORE_DIG_CLANE_1_RW_HS_TX_3			0xa606
++#define CORE_DIG_CLANE_1_RW_HS_TX_4			0xa608
++#define CORE_DIG_CLANE_1_RW_HS_TX_5			0xa60a
++#define CORE_DIG_CLANE_1_RW_HS_TX_6			0xa60c
++#define CORE_DIG_CLANE_1_RW_HS_TX_7			0xa60e
++#define CORE_DIG_CLANE_1_RW_HS_TX_8			0xa610
++#define CORE_DIG_CLANE_1_RW_HS_TX_9			0xa612
++#define CORE_DIG_CLANE_1_RW_HS_TX_10			0xa614
++#define CORE_DIG_CLANE_1_RW_HS_TX_11			0xa616
++#define CORE_DIG_CLANE_1_RW_HS_TX_12			0xa618
++#define CORE_DIG_CLANE_1_RW_HS_TX_13			0xa61a
++#define CORE_DIG_CLANE_2_RW_CFG_0			0xa800
++#define CORE_DIG_CLANE_2_RW_CFG_2			0xa804
++#define CORE_DIG_CLANE_2_RW_LP_0			0xa880
++#define CORE_DIG_CLANE_2_RW_LP_1			0xa882
++#define CORE_DIG_CLANE_2_RW_LP_2			0xa884
++#define CORE_DIG_CLANE_2_R_LP_0				0xa8a0
++#define CORE_DIG_CLANE_2_R_LP_1				0xa8a2
++#define CORE_DIG_CLANE_2_RW_HS_RX_0			0xa900
++#define CORE_DIG_CLANE_2_RW_HS_RX_1			0xa902
++#define CORE_DIG_CLANE_2_RW_HS_RX_2			0xa904
++#define CORE_DIG_CLANE_2_RW_HS_RX_3			0xa906
++#define CORE_DIG_CLANE_2_RW_HS_RX_4			0xa908
++#define CORE_DIG_CLANE_2_RW_HS_RX_5			0xa90a
++#define CORE_DIG_CLANE_2_RW_HS_RX_6			0xa90c
++#define CORE_DIG_CLANE_2_R_RX_0				0xa920
++#define CORE_DIG_CLANE_2_R_RX_1				0xa922
++#define CORE_DIG_CLANE_2_R_TX_0				0xa924
++#define CORE_DIG_CLANE_2_R_RX_2				0xa926
++#define CORE_DIG_CLANE_2_R_RX_3				0xa928
++#define CORE_DIG_CLANE_2_RW_HS_TX_0			0xaa00
++#define CORE_DIG_CLANE_2_RW_HS_TX_1			0xaa02
++#define CORE_DIG_CLANE_2_RW_HS_TX_2			0xaa04
++#define CORE_DIG_CLANE_2_RW_HS_TX_3			0xaa06
++#define CORE_DIG_CLANE_2_RW_HS_TX_4			0xaa08
++#define CORE_DIG_CLANE_2_RW_HS_TX_5			0xaa0a
++#define CORE_DIG_CLANE_2_RW_HS_TX_6			0xaa0c
++#define CORE_DIG_CLANE_2_RW_HS_TX_7			0xaa0e
++#define CORE_DIG_CLANE_2_RW_HS_TX_8			0xaa10
++#define CORE_DIG_CLANE_2_RW_HS_TX_9			0xaa12
++#define CORE_DIG_CLANE_2_RW_HS_TX_10			0xaa14
++#define CORE_DIG_CLANE_2_RW_HS_TX_11			0xaa16
++#define CORE_DIG_CLANE_2_RW_HS_TX_12			0xaa18
++#define CORE_DIG_CLANE_2_RW_HS_TX_13			0xaa1a
+ 
+ /* dwc csi host controller registers */
+-#define IS_IO_CSI2_HOST_BASE(i)			(IS_IO_BASE + 0x40000U + \
+-						 0x2000U * (i))
+-#define VERSION					0
+-#define N_LANES					0x4U
+-#define CSI2_RESETN				0x8U
+-#define INT_ST_MAIN				0xcU
+-#define DATA_IDS_1				0x10U
+-#define DATA_IDS_2				0x14U
+-#define CDPHY_MODE				0x1cU
+-#define DATA_IDS_VC_1				0x30U
+-#define DATA_IDS_VC_2				0x34U
+-#define PHY_SHUTDOWNZ				0x40U
+-#define DPHY_RSTZ				0x44U
+-#define PHY_RX					0x48U
+-#define PHY_STOPSTATE				0x4cU
+-#define PHY_TEST_CTRL0				0x50U
+-#define PHY_TEST_CTRL1				0x54U
+-#define PPI_PG_PATTERN_VRES			0x60U
+-#define PPI_PG_PATTERN_HRES			0x64U
+-#define PPI_PG_CONFIG				0x68U
+-#define PPI_PG_ENABLE				0x6cU
+-#define PPI_PG_STATUS				0x70U
+-#define VC_EXTENSION				0xc8U
+-#define PHY_CAL					0xccU
+-#define INT_ST_PHY_FATAL			0xe0U
+-#define INT_MSK_PHY_FATAL			0xe4U
+-#define INT_FORCE_PHY_FATAL			0xe8U
+-#define INT_ST_PKT_FATAL			0xf0U
+-#define INT_MSK_PKT_FATAL			0xf4U
+-#define INT_FORCE_PKT_FATAL			0xf8U
+-#define INT_ST_PHY				0x110U
+-#define INT_MSK_PHY				0x114U
+-#define INT_FORCE_PHY				0x118U
+-#define INT_ST_LINE				0x130U
+-#define INT_MSK_LINE				0x134U
+-#define INT_FORCE_LINE				0x138U
+-#define INT_ST_BNDRY_FRAME_FATAL		0x280U
+-#define INT_MSK_BNDRY_FRAME_FATAL		0x284U
+-#define INT_FORCE_BNDRY_FRAME_FATAL		0x288U
+-#define INT_ST_SEQ_FRAME_FATAL			0x290U
+-#define INT_MSK_SEQ_FRAME_FATAL			0x294U
+-#define INT_FORCE_SEQ_FRAME_FATAL		0x298U
+-#define INT_ST_CRC_FRAME_FATAL			0x2a0U
+-#define INT_MSK_CRC_FRAME_FATAL			0x2a4U
+-#define INT_FORCE_CRC_FRAME_FATAL		0x2a8U
+-#define INT_ST_PLD_CRC_FATAL			0x2b0U
+-#define INT_MSK_PLD_CRC_FATAL			0x2b4U
+-#define INT_FORCE_PLD_CRC_FATAL			0x2b8U
+-#define INT_ST_DATA_ID				0x2c0U
+-#define INT_MSK_DATA_ID				0x2c4U
+-#define INT_FORCE_DATA_ID			0x2c8U
+-#define INT_ST_ECC_CORRECTED			0x2d0U
+-#define INT_MSK_ECC_CORRECTED			0x2d4U
+-#define INT_FORCE_ECC_CORRECTED			0x2d8U
+-#define SCRAMBLING				0x300U
+-#define SCRAMBLING_SEED1			0x304U
+-#define SCRAMBLING_SEED2			0x308U
+-#define SCRAMBLING_SEED3			0x30cU
+-#define SCRAMBLING_SEED4			0x310U
+-#define SCRAMBLING				0x300U
++#define IS_IO_CSI2_HOST_BASE(i)			(IS_IO_BASE + 0x40000 + \
++						 0x2000 * (i))
++#define VERSION					0x0
++#define N_LANES					0x4
++#define CSI2_RESETN				0x8
++#define INT_ST_MAIN				0xc
++#define DATA_IDS_1				0x10
++#define DATA_IDS_2				0x14
++#define CDPHY_MODE				0x1c
++#define DATA_IDS_VC_1				0x30
++#define DATA_IDS_VC_2				0x34
++#define PHY_SHUTDOWNZ				0x40
++#define DPHY_RSTZ				0x44
++#define PHY_RX					0x48
++#define PHY_STOPSTATE				0x4c
++#define PHY_TEST_CTRL0				0x50
++#define PHY_TEST_CTRL1				0x54
++#define PPI_PG_PATTERN_VRES			0x60
++#define PPI_PG_PATTERN_HRES			0x64
++#define PPI_PG_CONFIG				0x68
++#define PPI_PG_ENABLE				0x6c
++#define PPI_PG_STATUS				0x70
++#define VC_EXTENSION				0xc8
++#define PHY_CAL					0xcc
++#define INT_ST_PHY_FATAL			0xe0
++#define INT_MSK_PHY_FATAL			0xe4
++#define INT_FORCE_PHY_FATAL			0xe8
++#define INT_ST_PKT_FATAL			0xf0
++#define INT_MSK_PKT_FATAL			0xf4
++#define INT_FORCE_PKT_FATAL			0xf8
++#define INT_ST_PHY				0x110
++#define INT_MSK_PHY				0x114
++#define INT_FORCE_PHY				0x118
++#define INT_ST_LINE				0x130
++#define INT_MSK_LINE				0x134
++#define INT_FORCE_LINE				0x138
++#define INT_ST_BNDRY_FRAME_FATAL		0x280
++#define INT_MSK_BNDRY_FRAME_FATAL		0x284
++#define INT_FORCE_BNDRY_FRAME_FATAL		0x288
++#define INT_ST_SEQ_FRAME_FATAL			0x290
++#define INT_MSK_SEQ_FRAME_FATAL			0x294
++#define INT_FORCE_SEQ_FRAME_FATAL		0x298
++#define INT_ST_CRC_FRAME_FATAL			0x2a0
++#define INT_MSK_CRC_FRAME_FATAL			0x2a4
++#define INT_FORCE_CRC_FRAME_FATAL		0x2a8
++#define INT_ST_PLD_CRC_FATAL			0x2b0
++#define INT_MSK_PLD_CRC_FATAL			0x2b4
++#define INT_FORCE_PLD_CRC_FATAL			0x2b8
++#define INT_ST_DATA_ID				0x2c0
++#define INT_MSK_DATA_ID				0x2c4
++#define INT_FORCE_DATA_ID			0x2c8
++#define INT_ST_ECC_CORRECTED			0x2d0
++#define INT_MSK_ECC_CORRECTED			0x2d4
++#define INT_FORCE_ECC_CORRECTED			0x2d8
++#define SCRAMBLING				0x300
++#define SCRAMBLING_SEED1			0x304
++#define SCRAMBLING_SEED2			0x308
++#define SCRAMBLING_SEED3			0x30c
++#define SCRAMBLING_SEED4			0x310
++#define SCRAMBLING				0x300
+ 
+-#define IS_IO_CSI2_ADPL_PORT_BASE(i)		(IS_IO_BASE + 0x40800U + \
+-						 0x2000U * (i))
+-#define CSI2_ADPL_INPUT_MODE			0
+-#define CSI2_ADPL_CSI_RX_ERR_IRQ_CLEAR_EN	0x4U
+-#define CSI2_ADPL_CSI_RX_ERR_IRQ_CLEAR_ADDR	0x8U
+-#define CSI2_ADPL_CSI_RX_ERR_IRQ_STATUS		0xcU
+-#define CSI2_ADPL_IRQ_CTL_COMMON_STATUS		0xa4U
+-#define CSI2_ADPL_IRQ_CTL_COMMON_CLEAR		0xa8U
+-#define CSI2_ADPL_IRQ_CTL_COMMON_ENABLE		0xacU
+-#define CSI2_ADPL_IRQ_CTL_FS_STATUS		0xbcU
+-#define CSI2_ADPL_IRQ_CTL_FS_CLEAR		0xc0U
+-#define CSI2_ADPL_IRQ_CTL_FS_ENABLE		0xc4U
+-#define CSI2_ADPL_IRQ_CTL_FE_STATUS		0xc8U
+-#define CSI2_ADPL_IRQ_CTL_FE_CLEAR		0xccU
+-#define CSI2_ADPL_IRQ_CTL_FE_ENABLE		0xd0U
++#define IS_IO_CSI2_ADPL_PORT_BASE(i)		(IS_IO_BASE + 0x40800 + \
++						 0x2000 * (i))
++#define CSI2_ADPL_INPUT_MODE			0x0
++#define CSI2_ADPL_CSI_RX_ERR_IRQ_CLEAR_EN	0x4
++#define CSI2_ADPL_CSI_RX_ERR_IRQ_CLEAR_ADDR	0x8
++#define CSI2_ADPL_CSI_RX_ERR_IRQ_STATUS		0xc
++#define CSI2_ADPL_IRQ_CTL_COMMON_STATUS		0xa4
++#define CSI2_ADPL_IRQ_CTL_COMMON_CLEAR		0xa8
++#define CSI2_ADPL_IRQ_CTL_COMMON_ENABLE		0xac
++#define CSI2_ADPL_IRQ_CTL_FS_STATUS		0xbc
++#define CSI2_ADPL_IRQ_CTL_FS_CLEAR		0xc0
++#define CSI2_ADPL_IRQ_CTL_FS_ENABLE		0xc4
++#define CSI2_ADPL_IRQ_CTL_FE_STATUS		0xc8
++#define CSI2_ADPL_IRQ_CTL_FE_CLEAR		0xcc
++#define CSI2_ADPL_IRQ_CTL_FE_ENABLE		0xd0
+ 
+ /* software control the legacy csi irq */
+-#define IS_IO_CSI2_ERR_LEGACY_IRQ_CTL_BASE(i)	(IS_IO_BASE + 0x40c00U + \
+-						 0x2000U * (i))
+-#define IS_IO_CSI2_SYNC_LEGACY_IRQ_CTL_BASE(i)	(IS_IO_BASE + 0x40d00U + \
+-						 0x2000U * (i))
+-#define IS_IO_CSI2_LEGACY_IRQ_CTRL_BASE		(IS_IO_BASE + 0x49000U)
++#define IS_IO_CSI2_ERR_LEGACY_IRQ_CTL_BASE(i)	(IS_IO_BASE + 0x40c00 + \
++						 0x2000 * (i))
++#define IS_IO_CSI2_SYNC_LEGACY_IRQ_CTL_BASE(i)	(IS_IO_BASE + 0x40d00 + \
++						 0x2000 * (i))
++#define IS_IO_CSI2_LEGACY_IRQ_CTRL_BASE		(IS_IO_BASE + 0x49000)
+ #define IS_IO_CSI2_IRQ_CTRL_BASE		(IS_IO_BASE + 0x4e100)
+ 
+-#define IRQ_CTL_EDGE				0
+-#define IRQ_CTL_MASK				0x4U
+-#define IRQ_CTL_STATUS				0x8U
+-#define IRQ_CTL_CLEAR				0xcU
+-#define IRQ_CTL_ENABLE				0x10U
++#define IRQ_CTL_EDGE				0x0
++#define IRQ_CTL_MASK				0x4
++#define IRQ_CTL_STATUS				0x8
++#define IRQ_CTL_CLEAR				0xc
++#define IRQ_CTL_ENABLE				0x10
+ /* FE irq for PTL */
+-#define IRQ1_CTL_MASK				0x14U
+-#define IRQ1_CTL_STATUS				0x18U
+-#define IRQ1_CTL_CLEAR				0x1cU
+-#define IRQ1_CTL_ENABLE				0x20U
++#define IRQ1_CTL_MASK				0x14
++#define IRQ1_CTL_STATUS				0x18
++#define IRQ1_CTL_CLEAR				0x1c
++#define IRQ1_CTL_ENABLE				0x20
+ 
+ /* software to set the clock gate to use the port or mgc */
+-#define IS_IO_GPREGS_BASE			(IS_IO_BASE + 0x49200U)
+-#define SRST_PORT_ARB				0
+-#define SRST_MGC				0x4U
+-#define SRST_WIDTH_CONV				0x8U
+-#define SRST_CSI_IRQ				0xcU
+-#define SRST_CSI_LEGACY_IRQ			0x10U
+-#define CLK_EN_TXCLKESC				0x14U
+-#define CLK_DIV_FACTOR_IS_CLK			0x18U
+-#define CLK_DIV_FACTOR_APB_CLK			0x1cU
+-#define CSI_PORT_CLK_GATE			0x20U
+-#define CSI_PORTAB_AGGREGATION			0x24U
+-#define MGC_CLK_GATE				0x2cU
+-#define CG_CTRL_BITS				0x3cU
+-#define SPARE_RW				0xf8U
+-#define SPARE_RO				0xfcU
++#define IS_IO_GPREGS_BASE			(IS_IO_BASE + 0x49200)
++#define SRST_PORT_ARB				0x0
++#define SRST_MGC				0x4
++#define SRST_WIDTH_CONV				0x8
++#define SRST_CSI_IRQ				0xc
++#define SRST_CSI_LEGACY_IRQ			0x10
++#define CLK_EN_TXCLKESC				0x14
++#define CLK_DIV_FACTOR_IS_CLK			0x18
++#define CLK_DIV_FACTOR_APB_CLK			0x1c
++#define CSI_PORT_CLK_GATE			0x20
++#define CSI_PORTAB_AGGREGATION			0x24
++#define MGC_CLK_GATE				0x2c
++#define CG_CTRL_BITS				0x3c
++#define SPARE_RW				0xf8
++#define SPARE_RO				0xfc
+ 
+-#define IS_IO_CSI2_MPF_PORT_BASE(i)		(IS_IO_BASE + 0x53000U + \
+-						 0x1000U * (i))
+-#define MPF_16_IRQ_CNTRL_STATUS			0x238U
+-#define MPF_16_IRQ_CNTRL_CLEAR			0x23cU
+-#define MPF_16_IRQ_CNTRL_ENABLE			0x240U
++#define IS_IO_CSI2_MPF_PORT_BASE(i)		(IS_IO_BASE + 0x53000 + \
++						 0x1000 * (i))
++#define MPF_16_IRQ_CNTRL_STATUS			0x238
++#define MPF_16_IRQ_CNTRL_CLEAR			0x23c
++#define MPF_16_IRQ_CNTRL_ENABLE			0x240
+ 
+ /* software config the phy */
+-#define IS_IO_CSI2_GPREGS_BASE		(IS_IO_BASE + 0x53400U)
+-#define IPU8_IS_IO_CSI2_GPREGS_BASE	(IS_IO_BASE + 0x40e00U)
+-#define CSI_ADAPT_LAYER_SRST		0
+-#define MPF_SRST_RST			0x4U
+-#define CSI_ERR_IRQ_CTRL_SRST		0x8U
+-#define CSI_SYNC_RC_SRST		0xcU
+-#define CSI_CG_CTRL_BITS		0x10U
+-#define SOC_CSI2HOST_SELECT		0x14U
+-#define PHY_RESET			0x18U
+-#define PHY_SHUTDOWN			0x1cU
+-#define PHY_MODE			0x20U
+-#define PHY_READY			0x24U
+-#define PHY_CLK_LANE_FORCE_CONTROL	0x28U
+-#define PHY_CLK_LANE_CONTROL		0x2cU
+-#define PHY_CLK_LANE_STATUS		0x30U
+-#define PHY_LANE_RX_ESC_REQ		0x34U
+-#define PHY_LANE_RX_ESC_DATA		0x38U
+-#define PHY_LANE_TURNDISABLE		0x3cU
+-#define PHY_LANE_DIRECTION		0x40U
+-#define PHY_LANE_FORCE_CONTROL		0x44U
+-#define PHY_LANE_CONTROL_EN		0x48U
+-#define PHY_LANE_CONTROL_DATAWIDTH	0x4cU
+-#define PHY_LANE_STATUS			0x50U
+-#define PHY_LANE_ERR			0x54U
+-#define PHY_LANE_RXALP			0x58U
+-#define PHY_LANE_RXALP_NIBBLE		0x5cU
+-#define PHY_PARITY_ERROR		0x60U
+-#define PHY_DEBUG_REGS_CLK_GATE_EN	0x64U
+-#define SPARE_RW			0xf8U
+-#define SPARE_RO			0xfcU
++#define IS_IO_CSI2_GPREGS_BASE		(IS_IO_BASE + 0x53400)
++#define IPU8_IS_IO_CSI2_GPREGS_BASE	(IS_IO_BASE + 0x40e00)
++#define CSI_ADAPT_LAYER_SRST		0x0
++#define MPF_SRST_RST			0x4
++#define CSI_ERR_IRQ_CTRL_SRST		0x8
++#define CSI_SYNC_RC_SRST		0xc
++#define CSI_CG_CTRL_BITS		0x10
++#define SOC_CSI2HOST_SELECT		0x14
++#define PHY_RESET			0x18
++#define PHY_SHUTDOWN			0x1c
++#define PHY_MODE			0x20
++#define PHY_READY			0x24
++#define PHY_CLK_LANE_FORCE_CONTROL	0x28
++#define PHY_CLK_LANE_CONTROL		0x2c
++#define PHY_CLK_LANE_STATUS		0x30
++#define PHY_LANE_RX_ESC_REQ		0x34
++#define PHY_LANE_RX_ESC_DATA		0x38
++#define PHY_LANE_TURNDISABLE		0x3c
++#define PHY_LANE_DIRECTION		0x40
++#define PHY_LANE_FORCE_CONTROL		0x44
++#define PHY_LANE_CONTROL_EN		0x48
++#define PHY_LANE_CONTROL_DATAWIDTH	0x4c
++#define PHY_LANE_STATUS			0x50
++#define PHY_LANE_ERR			0x54
++#define PHY_LANE_RXALP			0x58
++#define PHY_LANE_RXALP_NIBBLE		0x5c
++#define PHY_PARITY_ERROR		0x60
++#define PHY_DEBUG_REGS_CLK_GATE_EN	0x64
++#define SPARE_RW			0xf8
++#define SPARE_RO			0xfc
+ 
+ /* software not touch */
+ #define PORT_ARB_BASE				(IS_IO_BASE + 0x4e000)
+-#define PORT_ARB_IRQ_CTL_STATUS			0x4U
+-#define PORT_ARB_IRQ_CTL_CLEAR			0x8U
+-#define PORT_ARB_IRQ_CTL_ENABLE			0xcU
++#define PORT_ARB_IRQ_CTL_STATUS			0x4
++#define PORT_ARB_IRQ_CTL_CLEAR			0x8
++#define PORT_ARB_IRQ_CTL_ENABLE			0xc
+ 
+ #define MGC_PPC					4U
+ #define MGC_DTYPE_RAW(i)			(((i) - 8) / 2)
+-#define IS_IO_MGC_BASE				(IS_IO_BASE + 0x48000U)
+-#define MGC_KICK				0
+-#define MGC_ASYNC_STOP				0x4U
+-#define MGC_PORT_OFFSET				0x100U
++#define IS_IO_MGC_BASE				(IS_IO_BASE + 0x48000)
++#define MGC_KICK				0x0
++#define MGC_ASYNC_STOP				0x4
++#define MGC_PORT_OFFSET				0x100
+ #define MGC_CSI_PORT_MAP(i)			(0x8 + (i) * 0x4)
+-#define MGC_MG_PORT(i)				(IS_IO_MGC_BASE +	\
++#define MGC_MG_PORT(i)				(IS_IO_MGC_BASE + \
+ 						 (i) * MGC_PORT_OFFSET)
+ /* per mgc instance */
+-#define MGC_MG_CSI_ADAPT_LAYER_TYPE		0x28U
+-#define MGC_MG_MODE				0x2cU
+-#define MGC_MG_INIT_COUNTER			0x30U
+-#define MGC_MG_MIPI_VC				0x34U
+-#define MGC_MG_MIPI_DTYPES			0x38U
+-#define MGC_MG_MULTI_DTYPES_MODE		0x3cU
+-#define MGC_MG_NOF_FRAMES			0x40U
+-#define MGC_MG_FRAME_DIM			0x44U
+-#define MGC_MG_HBLANK				0x48U
+-#define MGC_MG_VBLANK				0x4cU
+-#define MGC_MG_TPG_MODE				0x50U
+-#define MGC_MG_TPG_R0				0x54U
+-#define MGC_MG_TPG_G0				0x58U
+-#define MGC_MG_TPG_B0				0x5cU
+-#define MGC_MG_TPG_R1				0x60U
+-#define MGC_MG_TPG_G1				0x64U
+-#define MGC_MG_TPG_B1				0x68U
+-#define MGC_MG_TPG_FACTORS			0x6cU
+-#define MGC_MG_TPG_MASKS			0x70U
+-#define MGC_MG_TPG_XY_MASK			0x74U
+-#define MGC_MG_TPG_TILE_DIM			0x78U
+-#define MGC_MG_PRBS_LFSR_INIT_0			0x7cU
+-#define MGC_MG_PRBS_LFSR_INIT_1			0x80U
+-#define MGC_MG_SYNC_STOP_POINT			0x84U
+-#define MGC_MG_SYNC_STOP_POINT_LOC		0x88U
+-#define MGC_MG_ERR_INJECT			0x8cU
+-#define MGC_MG_ERR_LOCATION			0x90U
+-#define MGC_MG_DTO_SPEED_CTRL_EN		0x94U
+-#define MGC_MG_DTO_SPEED_CTRL_INCR_VAL		0x98U
+-#define MGC_MG_HOR_LOC_STTS			0x9cU
+-#define MGC_MG_VER_LOC_STTS			0xa0U
+-#define MGC_MG_FRAME_NUM_STTS			0xa4U
+-#define MGC_MG_BUSY_STTS			0xa8U
+-#define MGC_MG_STOPPED_STTS			0xacU
++#define MGC_MG_CSI_ADAPT_LAYER_TYPE		0x28
++#define MGC_MG_MODE				0x2c
++#define MGC_MG_INIT_COUNTER			0x30
++#define MGC_MG_MIPI_VC				0x34
++#define MGC_MG_MIPI_DTYPES			0x38
++#define MGC_MG_MULTI_DTYPES_MODE		0x3c
++#define MGC_MG_NOF_FRAMES			0x40
++#define MGC_MG_FRAME_DIM			0x44
++#define MGC_MG_HBLANK				0x48
++#define MGC_MG_VBLANK				0x4c
++#define MGC_MG_TPG_MODE				0x50
++#define MGC_MG_TPG_R0				0x54
++#define MGC_MG_TPG_G0				0x58
++#define MGC_MG_TPG_B0				0x5c
++#define MGC_MG_TPG_R1				0x60
++#define MGC_MG_TPG_G1				0x64
++#define MGC_MG_TPG_B1				0x68
++#define MGC_MG_TPG_FACTORS			0x6c
++#define MGC_MG_TPG_MASKS			0x70
++#define MGC_MG_TPG_XY_MASK			0x74
++#define MGC_MG_TPG_TILE_DIM			0x78
++#define MGC_MG_PRBS_LFSR_INIT_0			0x7c
++#define MGC_MG_PRBS_LFSR_INIT_1			0x80
++#define MGC_MG_SYNC_STOP_POINT			0x84
++#define MGC_MG_SYNC_STOP_POINT_LOC		0x88
++#define MGC_MG_ERR_INJECT			0x8c
++#define MGC_MG_ERR_LOCATION			0x90
++#define MGC_MG_DTO_SPEED_CTRL_EN		0x94
++#define MGC_MG_DTO_SPEED_CTRL_INCR_VAL		0x98
++#define MGC_MG_HOR_LOC_STTS			0x9c
++#define MGC_MG_VER_LOC_STTS			0xa0
++#define MGC_MG_FRAME_NUM_STTS			0xa4
++#define MGC_MG_BUSY_STTS			0xa8
++#define MGC_MG_STOPPED_STTS			0xac
+ /* tile width and height in pixels for Chess board and Color palette */
+ #define MGC_TPG_TILE_WIDTH			64U
+ #define MGC_TPG_TILE_HEIGHT			64U
+ 
+-#define IPU_CSI_PORT_A_ADDR_OFFSET		0
+-#define IPU_CSI_PORT_B_ADDR_OFFSET		0
+-#define IPU_CSI_PORT_C_ADDR_OFFSET		0
+-#define IPU_CSI_PORT_D_ADDR_OFFSET		0
++#define IPU_CSI_PORT_A_ADDR_OFFSET		0x0
++#define IPU_CSI_PORT_B_ADDR_OFFSET		0x0
++#define IPU_CSI_PORT_C_ADDR_OFFSET		0x0
++#define IPU_CSI_PORT_D_ADDR_OFFSET		0x0
+ 
+ /*
+  * 0 - CSI RX Port 0 interrupt;
+@@ -1072,10 +1072,10 @@
+  * 12 - isys_cfgnoc_err_probe_intl;
+  * 13-15 - reserved
+  */
+-#define IPU7_CSI_IS_IO_IRQ_MASK		0xffffU
++#define IPU7_CSI_IS_IO_IRQ_MASK		0xffff
+ 
+ /* Adapter layer irq */
+-#define IPU7_CSI_ADPL_IRQ_MASK		0xffffU
++#define IPU7_CSI_ADPL_IRQ_MASK		0xffff
+ 
+ /* sw irq from legacy irq control
+  * legacy irq status
+@@ -1099,7 +1099,7 @@
+  * 7 - CSI Port 2 fs interrupt
+  * 8 - CSI Port 2 fe interrupt
+  */
+-#define IPU7_CSI_RX_LEGACY_IRQ_MASK		0x1ffU
++#define IPU7_CSI_RX_LEGACY_IRQ_MASK		0x1ff
+ 
+ /* legacy error status per port
+  * 0 - Error handler FIFO full;
+@@ -1112,7 +1112,7 @@
+  * 7 - CSI Combo Rx interrupt;
+  * 8 - IDI CDC FIFO overflow; remaining bits are reserved and tied to 0;
+  */
+-#define IPU7_CSI_RX_ERROR_IRQ_MASK		0xfffU
++#define IPU7_CSI_RX_ERROR_IRQ_MASK		0xfff
+ 
+ /*
+  * 0 - VC0 frame start received
+@@ -1149,8 +1149,8 @@
+  * 31 - VC15 frame end received
+  */
+ 
+-#define IPU7_CSI_RX_SYNC_IRQ_MASK		0 /* 0xffffffff */
+-#define IPU7P5_CSI_RX_SYNC_FE_IRQ_MASK		0 /* 0xffffffff */
++#define IPU7_CSI_RX_SYNC_IRQ_MASK		0x0
++#define IPU7P5_CSI_RX_SYNC_FE_IRQ_MASK		0x0
+ 
+ #define CSI_RX_NUM_ERRORS_IN_IRQ		12U
+ #define CSI_RX_NUM_SYNC_IN_IRQ			32U
+@@ -1175,23 +1175,23 @@ enum CSI2HOST_SELECTION {
+ 	CSI2HOST_SEL_CSI2HOST = 1,
+ };
+ 
+-#define IPU7_ISYS_LEGACY_IRQ_CSI2(port)		(0x3U << (port))
+-#define IPU7P5_ISYS_LEGACY_IRQ_CSI2(port)	(0x7U << (port))
++#define IPU7_ISYS_LEGACY_IRQ_CSI2(port)		(0x3 << (port))
++#define IPU7P5_ISYS_LEGACY_IRQ_CSI2(port)	(0x7 << (port))
+ 
+ /* ---------------------------------------------------------------- */
+-#define CSI_REG_BASE				0x220000U
++#define CSI_REG_BASE				0x220000
+ #define CSI_REG_BASE_PORT(id)			((id) * 0x1000)
+ 
+ /* CSI Port General Purpose Registers */
+-#define CSI_REG_PORT_GPREG_SRST			0
+-#define CSI_REG_PORT_GPREG_CSI2_SLV_REG_SRST	0x4U
+-#define CSI_REG_PORT_GPREG_CSI2_PORT_CONTROL	0x8U
++#define CSI_REG_PORT_GPREG_SRST			0x0
++#define CSI_REG_PORT_GPREG_CSI2_SLV_REG_SRST	0x4
++#define CSI_REG_PORT_GPREG_CSI2_PORT_CONTROL	0x8
+ 
+ #define CSI_RX_NUM_IRQ				32U
+ 
+-#define IPU7_CSI_RX_SYNC_FS_VC			0x55555555U
+-#define IPU7_CSI_RX_SYNC_FE_VC			0xaaaaaaaaU
+-#define IPU7P5_CSI_RX_SYNC_FS_VC		0xffffU
+-#define IPU7P5_CSI_RX_SYNC_FE_VC		0xffffU
++#define IPU7_CSI_RX_SYNC_FS_VC			0x55555555
++#define IPU7_CSI_RX_SYNC_FE_VC			0xaaaaaaaa
++#define IPU7P5_CSI_RX_SYNC_FS_VC		0xffff
++#define IPU7P5_CSI_RX_SYNC_FE_VC		0xffff
+ 
+ #endif /* IPU7_ISYS_CSI2_REG_H */
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-csi2.c b/drivers/media/pci/intel/ipu7/ipu7-isys-csi2.c
+index 6c9bd387a..0c931a7fd 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys-csi2.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-csi2.c
+@@ -54,9 +54,6 @@ s64 ipu7_isys_csi2_get_link_freq(struct ipu7_isys_csi2 *csi2)
+ {
+ 	struct media_pad *src_pad;
+ 
+-	if (!csi2)
+-		return -EINVAL;
+-
+ 	src_pad = media_entity_remote_source_pad_unique(&csi2->asd.sd.entity);
+ 	if (IS_ERR(src_pad)) {
+ 		dev_err(&csi2->isys->adev->auxdev.dev,
+@@ -118,35 +115,11 @@ static const struct v4l2_subdev_core_ops csi2_sd_core_ops = {
+ 	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
+ };
+ 
+-static void csi2_irq_en(struct ipu7_isys_csi2 *csi2, bool enable)
++static void csi2_irq_enable(struct ipu7_isys_csi2 *csi2)
+ {
+ 	struct ipu7_device *isp = csi2->isys->adev->isp;
+ 	unsigned int offset, mask;
+ 
+-	if (!enable) {
+-		/* disable CSI2 legacy error irq */
+-		offset = IS_IO_CSI2_ERR_LEGACY_IRQ_CTL_BASE(csi2->port);
+-		mask = IPU7_CSI_RX_ERROR_IRQ_MASK;
+-		writel(mask, csi2->base + offset + IRQ_CTL_CLEAR);
+-		writel(0, csi2->base + offset + IRQ_CTL_MASK);
+-		writel(0, csi2->base + offset + IRQ_CTL_ENABLE);
+-
+-		/* disable CSI2 legacy sync irq */
+-		offset = IS_IO_CSI2_SYNC_LEGACY_IRQ_CTL_BASE(csi2->port);
+-		mask = IPU7_CSI_RX_SYNC_IRQ_MASK;
+-		writel(mask, csi2->base + offset + IRQ_CTL_CLEAR);
+-		writel(0, csi2->base + offset + IRQ_CTL_MASK);
+-		writel(0, csi2->base + offset + IRQ_CTL_ENABLE);
+-
+-		if (!is_ipu7(isp->hw_ver)) {
+-			writel(mask, csi2->base + offset + IRQ1_CTL_CLEAR);
+-			writel(0, csi2->base + offset + IRQ1_CTL_MASK);
+-			writel(0, csi2->base + offset + IRQ1_CTL_ENABLE);
+-		}
+-
+-		return;
+-	}
+-
+ 	/* enable CSI2 legacy error irq */
+ 	offset = IS_IO_CSI2_ERR_LEGACY_IRQ_CTL_BASE(csi2->port);
+ 	mask = IPU7_CSI_RX_ERROR_IRQ_MASK;
+@@ -169,6 +142,32 @@ static void csi2_irq_en(struct ipu7_isys_csi2 *csi2, bool enable)
+ 	}
+ }
+ 
++static void csi2_irq_disable(struct ipu7_isys_csi2 *csi2)
++{
++	struct ipu7_device *isp = csi2->isys->adev->isp;
++	unsigned int offset, mask;
++
++	/* disable CSI2 legacy error irq */
++	offset = IS_IO_CSI2_ERR_LEGACY_IRQ_CTL_BASE(csi2->port);
++	mask = IPU7_CSI_RX_ERROR_IRQ_MASK;
++	writel(mask, csi2->base + offset + IRQ_CTL_CLEAR);
++	writel(0, csi2->base + offset + IRQ_CTL_MASK);
++	writel(0, csi2->base + offset + IRQ_CTL_ENABLE);
++
++	/* disable CSI2 legacy sync irq */
++	offset = IS_IO_CSI2_SYNC_LEGACY_IRQ_CTL_BASE(csi2->port);
++	mask = IPU7_CSI_RX_SYNC_IRQ_MASK;
++	writel(mask, csi2->base + offset + IRQ_CTL_CLEAR);
++	writel(0, csi2->base + offset + IRQ_CTL_MASK);
++	writel(0, csi2->base + offset + IRQ_CTL_ENABLE);
++
++	if (!is_ipu7(isp->hw_ver)) {
++		writel(mask, csi2->base + offset + IRQ1_CTL_CLEAR);
++		writel(0, csi2->base + offset + IRQ1_CTL_MASK);
++		writel(0, csi2->base + offset + IRQ1_CTL_ENABLE);
++	}
++}
++
+ static void ipu7_isys_csi2_disable_stream(struct ipu7_isys_csi2 *csi2)
+ {
+ 	struct ipu7_isys *isys = csi2->isys;
+@@ -177,7 +176,7 @@ static void ipu7_isys_csi2_disable_stream(struct ipu7_isys_csi2 *csi2)
+ 	ipu7_isys_csi_phy_powerdown(csi2);
+ 
+ 	writel(0x4, isys_base + IS_IO_GPREGS_BASE + CLK_DIV_FACTOR_APB_CLK);
+-	csi2_irq_en(csi2, 0);
++	csi2_irq_disable(csi2);
+ }
+ 
+ static int ipu7_isys_csi2_enable_stream(struct ipu7_isys_csi2 *csi2)
+@@ -211,7 +210,8 @@ static int ipu7_isys_csi2_enable_stream(struct ipu7_isys_csi2 *csi2)
+ 		dev_err(dev, "CSI-%d PHY power up failed %d\n", port, ret);
+ 		return ret;
+ 	}
+-	csi2_irq_en(csi2, 1);
++
++	csi2_irq_enable(csi2);
+ 
+ 	return 0;
+ }
+@@ -226,7 +226,7 @@ static int ipu7_isys_csi2_set_sel(struct v4l2_subdev *sd,
+ 	struct v4l2_mbus_framefmt *src_ffmt;
+ 	struct v4l2_rect *crop;
+ 
+-	if (sel->pad == CSI2_PAD_SINK || sel->target != V4L2_SEL_TGT_CROP)
++	if (sel->pad == IPU7_CSI2_PAD_SINK || sel->target != V4L2_SEL_TGT_CROP)
+ 		return -EINVAL;
+ 
+ 	sink_ffmt = v4l2_subdev_state_get_opposite_stream_format(state,
+@@ -319,7 +319,7 @@ static int ipu7_isys_csi2_enable_streams(struct v4l2_subdev *sd,
+ 	struct ipu7_isys_subdev *asd = to_ipu7_isys_subdev(sd);
+ 	struct ipu7_isys_csi2 *csi2 = to_ipu7_isys_csi2(asd);
+ 	struct v4l2_subdev *r_sd;
+-	struct media_pad *r_pad;
++	struct media_pad *rp;
+ 	u32 sink_pad, sink_stream;
+ 	int ret, i;
+ 
+@@ -342,10 +342,10 @@ static int ipu7_isys_csi2_enable_streams(struct v4l2_subdev *sd,
+ 	if (ret)
+ 		return ret;
+ 
+-	r_pad = media_pad_remote_pad_first(&sd->entity.pads[CSI2_PAD_SINK]);
+-	r_sd = media_entity_to_v4l2_subdev(r_pad->entity);
++	rp = media_pad_remote_pad_first(&sd->entity.pads[IPU7_CSI2_PAD_SINK]);
++	r_sd = media_entity_to_v4l2_subdev(rp->entity);
+ 
+-	ret = v4l2_subdev_enable_streams(r_sd, r_pad->index,
++	ret = v4l2_subdev_enable_streams(r_sd, rp->index,
+ 					 BIT_ULL(sink_stream));
+ 	if (!ret) {
+ 		csi2->stream_count++;
+@@ -365,7 +365,7 @@ static int ipu7_isys_csi2_disable_streams(struct v4l2_subdev *sd,
+ 	struct ipu7_isys_subdev *asd = to_ipu7_isys_subdev(sd);
+ 	struct ipu7_isys_csi2 *csi2 = to_ipu7_isys_csi2(asd);
+ 	struct v4l2_subdev *r_sd;
+-	struct media_pad *r_pad;
++	struct media_pad *rp;
+ 	u32 sink_pad, sink_stream;
+ 	int ret, i;
+ 
+@@ -379,10 +379,10 @@ static int ipu7_isys_csi2_disable_streams(struct v4l2_subdev *sd,
+ 	if (ret)
+ 		return ret;
+ 
+-	r_pad = media_pad_remote_pad_first(&sd->entity.pads[CSI2_PAD_SINK]);
+-	r_sd = media_entity_to_v4l2_subdev(r_pad->entity);
++	rp = media_pad_remote_pad_first(&sd->entity.pads[IPU7_CSI2_PAD_SINK]);
++	r_sd = media_entity_to_v4l2_subdev(rp->entity);
+ 
+-	v4l2_subdev_disable_streams(r_sd, r_pad->index, BIT_ULL(sink_stream));
++	v4l2_subdev_disable_streams(r_sd, rp->index, BIT_ULL(sink_stream));
+ 
+ 	if (--csi2->stream_count)
+ 		return 0;
+@@ -450,7 +450,8 @@ int ipu7_isys_csi2_init(struct ipu7_isys_csi2 *csi2,
+ 	csi2->asd.isys = isys;
+ 
+ 	ret = ipu7_isys_subdev_init(&csi2->asd, &csi2_sd_ops, 0,
+-				    NR_OF_CSI2_SINK_PADS, NR_OF_CSI2_SRC_PADS);
++				    IPU7_NR_OF_CSI2_SINK_PADS,
++				    IPU7_NR_OF_CSI2_SRC_PADS);
+ 	if (ret)
+ 		return ret;
+ 
+@@ -527,7 +528,7 @@ int ipu7_isys_csi2_get_remote_desc(u32 source_stream,
+ 	if (!source)
+ 		return -EPIPE;
+ 
+-	pad = media_pad_remote_pad_first(&csi2->asd.pad[CSI2_PAD_SINK]);
++	pad = media_pad_remote_pad_first(&csi2->asd.pad[IPU7_CSI2_PAD_SINK]);
+ 	if (!pad)
+ 		return -EPIPE;
+ 
+@@ -553,7 +554,7 @@ int ipu7_isys_csi2_get_remote_desc(u32 source_stream,
+ 		return -EINVAL;
+ 	}
+ 
+-	if (desc_entry->bus.csi2.vc >= NR_OF_CSI2_VC) {
++	if (desc_entry->bus.csi2.vc >= IPU7_NR_OF_CSI2_VC) {
+ 		dev_err(dev, "invalid vc %d\n", desc_entry->bus.csi2.vc);
+ 		return -EINVAL;
+ 	}
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-csi2.h b/drivers/media/pci/intel/ipu7/ipu7-isys-csi2.h
+index ea4e20525..6c23b80f9 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys-csi2.h
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-csi2.h
+@@ -16,23 +16,14 @@ struct ipu7_isys;
+ struct ipu7_isys_csi2_pdata;
+ struct ipu7_isys_stream;
+ 
+-#define NR_OF_CSI2_VC		16U
+-#define INVALID_VC_ID		-1
+-#define NR_OF_CSI2_SINK_PADS	1U
+-#define CSI2_PAD_SINK		0U
+-#define NR_OF_CSI2_SRC_PADS	8U
+-#define CSI2_PAD_SRC		1U
+-#define NR_OF_CSI2_PADS		(NR_OF_CSI2_SINK_PADS + NR_OF_CSI2_SRC_PADS)
+-
+-#define CSI2_CSI_RX_DLY_CNT_TERMEN_CLANE_A		0
+-#define CSI2_CSI_RX_DLY_CNT_TERMEN_CLANE_B		0
+-#define CSI2_CSI_RX_DLY_CNT_SETTLE_CLANE_A		95
+-#define CSI2_CSI_RX_DLY_CNT_SETTLE_CLANE_B		-8
+-
+-#define CSI2_CSI_RX_DLY_CNT_TERMEN_DLANE_A		0
+-#define CSI2_CSI_RX_DLY_CNT_TERMEN_DLANE_B		0
+-#define CSI2_CSI_RX_DLY_CNT_SETTLE_DLANE_A		85
+-#define CSI2_CSI_RX_DLY_CNT_SETTLE_DLANE_B		-2
++#define IPU7_NR_OF_CSI2_VC		16U
++#define INVALID_VC_ID			-1
++#define IPU7_NR_OF_CSI2_SINK_PADS	1U
++#define IPU7_CSI2_PAD_SINK		0U
++#define IPU7_NR_OF_CSI2_SRC_PADS	8U
++#define IPU7_CSI2_PAD_SRC		1U
++#define IPU7_NR_OF_CSI2_PADS		(IPU7_NR_OF_CSI2_SINK_PADS + \
++					 IPU7_NR_OF_CSI2_SRC_PADS)
+ 
+ /*
+  * struct ipu7_isys_csi2
+@@ -43,7 +34,7 @@ struct ipu7_isys_csi2 {
+ 	struct ipu7_isys_subdev asd;
+ 	struct ipu7_isys_csi2_pdata *pdata;
+ 	struct ipu7_isys *isys;
+-	struct ipu7_isys_video av[NR_OF_CSI2_SRC_PADS];
++	struct ipu7_isys_video av[IPU7_NR_OF_CSI2_SRC_PADS];
+ 
+ 	void __iomem *base;
+ 	u32 receiver_errors;
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-queue.c b/drivers/media/pci/intel/ipu7/ipu7-isys-queue.c
+index ed9b0209b..ab124396d 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys-queue.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-queue.c
+@@ -531,7 +531,7 @@ static void return_buffers(struct ipu7_isys_queue *aq,
+ 	 */
+ 	while (!list_empty(&aq->active)) {
+ 		ib = list_last_entry(&aq->active, struct ipu7_isys_buffer,
+-				      head);
++				     head);
+ 		vb = ipu7_isys_buffer_to_vb2_buffer(ib);
+ 
+ 		list_del(&ib->head);
+@@ -547,7 +547,7 @@ static void return_buffers(struct ipu7_isys_queue *aq,
+ 
+ 	while (!list_empty(&aq->incoming)) {
+ 		ib = list_last_entry(&aq->incoming, struct ipu7_isys_buffer,
+-				      head);
++				     head);
+ 		vb = ipu7_isys_buffer_to_vb2_buffer(ib);
+ 		list_del(&ib->head);
+ 		spin_unlock_irqrestore(&aq->lock, flags);
+@@ -692,7 +692,7 @@ static void reset_stop_streaming(struct ipu7_isys_video *av)
+ 	spin_lock_irqsave(&aq->lock, flags);
+ 	while (!list_empty(&aq->active)) {
+ 		ib = list_last_entry(&aq->active, struct ipu7_isys_buffer,
+-				      head);
++				     head);
+ 		vb = ipu7_isys_buffer_to_vb2_buffer(ib);
+ 
+ 		list_del(&ib->head);
+@@ -838,7 +838,7 @@ static int ipu_isys_reset(struct ipu7_isys_video *self_av,
+ 
+ 	dev_dbg(dev, "reset stop streams\n");
+ 	for (i = 0; i < csi2_pdata->nports; i++) {
+-		for (j = 0; j < NR_OF_CSI2_SRC_PADS; j++) {
++		for (j = 0; j < IPU7_NR_OF_CSI2_SRC_PADS; j++) {
+ 			av = &isys->csi2[i].av[j];
+ 			if (av == self_av)
+ 				continue;
+@@ -864,7 +864,7 @@ static int ipu_isys_reset(struct ipu7_isys_video *self_av,
+ 	dev_dbg(dev, "reset start streams\n");
+ 
+ 	for (j = 0; j < csi2_pdata->nports; j++) {
+-		for (i = 0; i < NR_OF_CSI2_SRC_PADS; i++) {
++		for (i = 0; i < IPU7_NR_OF_CSI2_SRC_PADS; i++) {
+ 			av = &isys->csi2[j].av[i];
+ 			if (!av->reset)
+ 				continue;
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-subdev.c b/drivers/media/pci/intel/ipu7/ipu7-isys-subdev.c
+index 17e9ab847..98b6ef6a2 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys-subdev.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-subdev.c
+@@ -19,39 +19,6 @@
+ #include "ipu7-isys.h"
+ #include "ipu7-isys-subdev.h"
+ 
+-unsigned int ipu7_isys_mbus_code_to_bpp(u32 code)
+-{
+-	switch (code) {
+-	case MEDIA_BUS_FMT_RGB888_1X24:
+-		return 24;
+-	case MEDIA_BUS_FMT_YUYV10_1X20:
+-		return 20;
+-	case MEDIA_BUS_FMT_Y10_1X10:
+-	case MEDIA_BUS_FMT_RGB565_1X16:
+-	case MEDIA_BUS_FMT_UYVY8_1X16:
+-	case MEDIA_BUS_FMT_YUYV8_1X16:
+-		return 16;
+-	case MEDIA_BUS_FMT_SBGGR12_1X12:
+-	case MEDIA_BUS_FMT_SGBRG12_1X12:
+-	case MEDIA_BUS_FMT_SGRBG12_1X12:
+-	case MEDIA_BUS_FMT_SRGGB12_1X12:
+-		return 12;
+-	case MEDIA_BUS_FMT_SBGGR10_1X10:
+-	case MEDIA_BUS_FMT_SGBRG10_1X10:
+-	case MEDIA_BUS_FMT_SGRBG10_1X10:
+-	case MEDIA_BUS_FMT_SRGGB10_1X10:
+-		return 10;
+-	case MEDIA_BUS_FMT_SBGGR8_1X8:
+-	case MEDIA_BUS_FMT_SGBRG8_1X8:
+-	case MEDIA_BUS_FMT_SGRBG8_1X8:
+-	case MEDIA_BUS_FMT_SRGGB8_1X8:
+-		return 8;
+-	default:
+-		WARN_ON(1);
+-		return -EINVAL;
+-	}
+-}
+-
+ unsigned int ipu7_isys_mbus_code_to_mipi(u32 code)
+ {
+ 	switch (code) {
+@@ -82,7 +49,7 @@ unsigned int ipu7_isys_mbus_code_to_mipi(u32 code)
+ 		return MIPI_CSI2_DT_RAW8;
+ 	default:
+ 		WARN_ON(1);
+-		return -EINVAL;
++		return 0xff;
+ 	}
+ }
+ 
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-subdev.h b/drivers/media/pci/intel/ipu7/ipu7-isys-subdev.h
+index 082362fea..aeefbb515 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys-subdev.h
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-subdev.h
+@@ -29,8 +29,6 @@ struct ipu7_isys_subdev {
+ 
+ #define to_ipu7_isys_subdev(__sd)			\
+ 	container_of(__sd, struct ipu7_isys_subdev, sd)
+-
+-unsigned int ipu7_isys_mbus_code_to_bpp(u32 code);
+ unsigned int ipu7_isys_mbus_code_to_mipi(u32 code);
+ bool ipu7_isys_is_bayer_format(u32 code);
+ u32 ipu7_isys_convert_bayer_order(u32 code, int x, int y);
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-tpg.c b/drivers/media/pci/intel/ipu7/ipu7-isys-tpg.c
+index 9d3f63c38..35b6298e4 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys-tpg.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-tpg.c
+@@ -39,6 +39,39 @@ static const u32 tpg_supported_codes[] = {
+ 
+ #define IPU_ISYS_FREQ		533000000UL
+ 
++static u32 isys_mbus_code_to_bpp(u32 code)
++{
++	switch (code) {
++	case MEDIA_BUS_FMT_RGB888_1X24:
++		return 24;
++	case MEDIA_BUS_FMT_YUYV10_1X20:
++		return 20;
++	case MEDIA_BUS_FMT_Y10_1X10:
++	case MEDIA_BUS_FMT_RGB565_1X16:
++	case MEDIA_BUS_FMT_UYVY8_1X16:
++	case MEDIA_BUS_FMT_YUYV8_1X16:
++		return 16;
++	case MEDIA_BUS_FMT_SBGGR12_1X12:
++	case MEDIA_BUS_FMT_SGBRG12_1X12:
++	case MEDIA_BUS_FMT_SGRBG12_1X12:
++	case MEDIA_BUS_FMT_SRGGB12_1X12:
++		return 12;
++	case MEDIA_BUS_FMT_SBGGR10_1X10:
++	case MEDIA_BUS_FMT_SGBRG10_1X10:
++	case MEDIA_BUS_FMT_SGRBG10_1X10:
++	case MEDIA_BUS_FMT_SRGGB10_1X10:
++		return 10;
++	case MEDIA_BUS_FMT_SBGGR8_1X8:
++	case MEDIA_BUS_FMT_SGBRG8_1X8:
++	case MEDIA_BUS_FMT_SGRBG8_1X8:
++	case MEDIA_BUS_FMT_SRGGB8_1X8:
++		return 8;
++	default:
++		WARN_ON(1);
++		return 0;
++	}
++}
++
+ static const struct v4l2_subdev_video_ops tpg_sd_video_ops = {
+ 	.s_stream = tpg_set_stream,
+ };
+@@ -337,7 +370,10 @@ static void tpg_get_timing(const struct ipu7_isys_tpg *tpg, u32 *dto,
+ 	height = format.height;
+ 	code = format.code;
+ 
+-	bpp = ipu7_isys_mbus_code_to_bpp(code);
++	bpp = isys_mbus_code_to_bpp(code);
++	if (!bpp)
++		return;
++
+ 	dev_dbg(dev, "MG%d code = 0x%x bpp = %u\n", tpg->index, code, bpp);
+ 	bits_per_line = width * bpp * TPG_BLANK_RATIO;
+ 
+@@ -410,7 +446,9 @@ static int tpg_start_stream(const struct ipu7_isys_tpg *tpg)
+ 	code = format.code;
+ 	dev_dbg(dev, "MG%d code: 0x%x resolution: %ux%u\n",
+ 		tpg->index, code, width, height);
+-	bpp = ipu7_isys_mbus_code_to_bpp(code);
++	bpp = isys_mbus_code_to_bpp(code);
++	if (!bpp)
++		return -EINVAL;
+ 
+ 	csi_port = tpg->index;
+ 	if (csi_port >= 4)
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-video.c b/drivers/media/pci/intel/ipu7/ipu7-isys-video.c
+index 3103dd0ec..12fdf556c 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys-video.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-video.c
+@@ -1198,6 +1198,8 @@ int ipu7_isys_setup_video(struct ipu7_isys_video *av,
+ 	if (ret == -ENOIOCTLCMD) {
+ 		av->vc = 0;
+ 		av->dt = ipu7_isys_mbus_code_to_mipi(pfmt->code);
++		if (av->dt == 0xff)
++			return -EINVAL;
+ 		*nr_queues = 1;
+ 	} else if (*nr_queues && !ret) {
+ 		dev_dbg(dev, "Framedesc: stream %u, len %u, vc %u, dt %#x\n",
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys.c b/drivers/media/pci/intel/ipu7/ipu7-isys.c
+index 2157e5c38..ed3e37b57 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-isys.c
++++ b/drivers/media/pci/intel/ipu7/ipu7-isys.c
+@@ -394,7 +394,7 @@ static void isys_unregister_video_devices(struct ipu7_isys *isys)
+ 	unsigned int i, j;
+ 
+ 	for (i = 0; i < csi2_pdata->nports; i++)
+-		for (j = 0; j < NR_OF_CSI2_SRC_PADS; j++)
++		for (j = 0; j < IPU7_NR_OF_CSI2_SRC_PADS; j++)
+ 			ipu7_isys_video_cleanup(&isys->csi2[i].av[j]);
+ }
+ 
+@@ -406,12 +406,12 @@ static int isys_register_video_devices(struct ipu7_isys *isys)
+ 	int ret;
+ 
+ 	for (i = 0; i < csi2_pdata->nports; i++) {
+-		for (j = 0; j < NR_OF_CSI2_SRC_PADS; j++) {
++		for (j = 0; j < IPU7_NR_OF_CSI2_SRC_PADS; j++) {
+ 			struct ipu7_isys_video *av = &isys->csi2[i].av[j];
+ 
+ 			snprintf(av->vdev.name, sizeof(av->vdev.name),
+ 				 IPU_ISYS_ENTITY_PREFIX " ISYS Capture %u",
+-				 i * NR_OF_CSI2_SRC_PADS + j);
++				 i * IPU7_NR_OF_CSI2_SRC_PADS + j);
+ 			av->isys = isys;
+ 			av->aq.vbq.buf_struct_size =
+ 				sizeof(struct ipu7_isys_video_buffer);
+@@ -429,7 +429,7 @@ fail:
+ 	while (i--) {
+ 		while (j--)
+ 			ipu7_isys_video_cleanup(&isys->csi2[i].av[j]);
+-		j = NR_OF_CSI2_SRC_PADS;
++		j = IPU7_NR_OF_CSI2_SRC_PADS;
+ 	}
+ 
+ 	return ret;
+@@ -483,10 +483,10 @@ static int isys_csi2_create_media_links(struct ipu7_isys *isys)
+ 	for (i = 0; i < csi2_pdata->nports; i++) {
+ 		sd = &isys->csi2[i].asd.sd.entity;
+ 
+-		for (j = 0; j < NR_OF_CSI2_SRC_PADS; j++) {
++		for (j = 0; j < IPU7_NR_OF_CSI2_SRC_PADS; j++) {
+ 			struct ipu7_isys_video *av = &isys->csi2[i].av[j];
+ 
+-			ret = media_create_pad_link(sd, CSI2_PAD_SRC + j,
++			ret = media_create_pad_link(sd, IPU7_CSI2_PAD_SRC + j,
+ 						    &av->vdev.entity, 0, 0);
+ 			if (ret) {
+ 				dev_err(dev, "CSI2 can't create link\n");
+@@ -1180,7 +1180,7 @@ static int isys_probe(struct auxiliary_device *auxdev,
+ #endif
+ 
+ 	cpu_latency_qos_add_request(&isys->pm_qos, PM_QOS_DEFAULT_VALUE);
+-	ret = alloc_fw_msg_bufs(isys, 20);
++	ret = alloc_fw_msg_bufs(isys, 40);
+ 	if (ret < 0)
+ 		goto out_cleanup_isys;
+ 
+@@ -1505,7 +1505,7 @@ static void ipu7_isys_csi2_isr(struct ipu7_isys_csi2 *csi2)
+ 		dev_dbg(dev, "csi2-%u FE status 0x%08x\n", csi2->port, fe);
+ 	}
+ 
+-	for (vc = 0; vc < NR_OF_CSI2_VC && (sync || fe); vc++) {
++	for (vc = 0; vc < IPU7_NR_OF_CSI2_VC && (sync || fe); vc++) {
+ 		s = ipu7_isys_query_stream_by_source(csi2->isys,
+ 						     csi2->asd.source, vc);
+ 		if (!s)
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-mmu.h b/drivers/media/pci/intel/ipu7/ipu7-mmu.h
+index 9f85d48d2..d85bb8ffc 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-mmu.h
++++ b/drivers/media/pci/intel/ipu7/ipu7-mmu.h
+@@ -17,8 +17,8 @@ struct ipu7_hw_variants;
+ struct ipu7_mmu;
+ struct ipu7_mmu_info;
+ 
+-#define ISYS_MMID 1
+-#define PSYS_MMID 0
++#define ISYS_MMID 0x1
++#define PSYS_MMID 0x0
+ 
+ /* IPU7 for LNL */
+ /* IS MMU Cmd RD */
+diff --git a/drivers/media/pci/intel/ipu7/ipu7-platform-regs.h b/drivers/media/pci/intel/ipu7/ipu7-platform-regs.h
+index 6c6e48945..eeadc886a 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7-platform-regs.h
++++ b/drivers/media/pci/intel/ipu7/ipu7-platform-regs.h
+@@ -21,70 +21,6 @@
+ 
+ #define FW_CODE_BASE				0x0
+ #define FW_DATA_BASE				0x4
+-#define CPU_AXI_CNTL				0x8
+-#define CPU_QOS_CNTL				0xc
+-#define IDMA_AXI_CNTL				0x10
+-#define IDMA_QOS_CNTL				0x14
+-#define MEF_SPLIT_SIZE				0x18
+-#define FW_MSG_CONTROL				0x1c
+-#define FW_MSG_CREDITS_STATUS			0x20
+-#define FW_MSG_CREDIT_TAKEN			0x24
+-#define FW_MSG_CREDIT_RETURNED			0x28
+-#define TRIG_IDMA_IN				0x2c
+-#define IDMA_DONE				0x30
+-#define IDMA_DONE_CLEAR				0x34
+-#define DMEM_CAPACITY				0x38
+-#define NON_SECURE_CODE_OFFSET			0x3c
+-#define UC_CG_CTRL_BITS				0x40
+-#define ALT_RESET_VEC				0x44
+-#define WDT_NMI_DURATION			0x104
+-#define WDT_RST_REQ_DURATION			0x108
+-#define WDT_CNTL				0x10c
+-#define WDT_NMI_CURRENT_COUNT			0x110
+-#define WDT_RST_CURRENT_COUNT			0x114
+-#define WDT_HALT				0x118
+-#define WDT_STATUS				0x11c
+-#define SPARE_REG_RW				0x120
+-#define SPARE_REG_RO				0x124
+-#define FW_TO_FW_IRQ_CNTL_EDGE			0x200
+-#define FW_TO_FW_IRQ_CNTL_MASK_N		0x204
+-#define FW_TO_FW_IRQ_CNTL_STATUS		0x208
+-#define FW_TO_FW_IRQ_CNTL_CLEAR			0x20c
+-#define FW_TO_FW_IRQ_CNTL_ENABLE		0x210
+-#define FW_TO_FW_IRQ_CNTL_LEVEL_NOT_PULSE	0x214
+-#define CLK_GATE_DIS				0x218
+-#define DEBUG_STATUS				0x1000
+-#define DEBUG_EXCPETION				0x1004
+-#define TIE_GENERAL_INPUT			0x1008
+-#define ERR_STATUS				0x100c
+-#define UC_ERR_INFO				0x1010
+-#define SPARE_CNTL				0x1014
+-#define MEF_TRC_CNTL				0x1100
+-#define DBG_MEF_LAST_PUSH			0x1104
+-#define DBG_MEF_LAST_POP			0x1108
+-#define DBG_MEF_COUNT_CNTL			0x110c
+-#define DBG_MEF_COUNT1				0x1110
+-#define DBG_MEF_COUNT2				0x1114
+-#define DBG_MEF_ACC_OCCUPANCY			0x1118
+-#define DBG_MEF_MAX_IRQ_TO_POP			0x111c
+-#define DBG_IRQ_CNTL				0x1120
+-#define DBG_IRQ_COUNT				0x1124
+-#define DBG_CYC_COUNT				0x1128
+-#define DBG_CNTL				0x1130
+-#define DBG_RST_REG				0x1134
+-#define DBG_MEF_STATUS0				0x1138
+-#define DBG_MEF_STATUS1				0x113c
+-#define PDEBUG_CTL				0x1140
+-#define PDEBUG_DATA				0x1144
+-#define PDEBUG_INST				0x1148
+-#define PDEBUG_LS0ADDR				0x114c
+-#define PDEBUG_LS0DATA				0x1150
+-#define PDEBUG_LS0STAT				0x1154
+-#define PDEBUG_PC				0x1158
+-#define PDEBUG_MISC				0x115c
+-#define PDEBUG_PREF_STS				0x1160
+-#define MEF0_ADDR				0x2000
+-#define MEF1_ADDR				0x2020
+ #define PRINTF_EN_THROUGH_TRACE			0x3004
+ #define PRINTF_EN_DIRECTLY_TO_DDR		0x3008
+ #define PRINTF_DDR_BASE_ADDR			0x300c
+diff --git a/drivers/media/pci/intel/ipu7/ipu7.c b/drivers/media/pci/intel/ipu7/ipu7.c
+index 970c38654..20c88d5a9 100644
+--- a/drivers/media/pci/intel/ipu7/ipu7.c
++++ b/drivers/media/pci/intel/ipu7/ipu7.c
+@@ -2192,7 +2192,7 @@ ipu7_isys_init(struct pci_dev *pdev, struct device *parent,
+ 	isys_adev->mmu = ipu7_mmu_init(dev, base, ISYS_MMID,
+ 				       &ipdata->hw_variant);
+ 	if (IS_ERR(isys_adev->mmu)) {
+-		dev_err_probe(dev, PTR_ERR(isys_adev),
++		dev_err_probe(dev, PTR_ERR(isys_adev->mmu),
+ 			      "ipu7_mmu_init(isys_adev->mmu) failed\n");
+ 		put_device(&isys_adev->auxdev.dev);
+ 		kfree(pdata);
+@@ -2239,7 +2239,7 @@ ipu7_psys_init(struct pci_dev *pdev, struct device *parent,
+ 	psys_adev->mmu = ipu7_mmu_init(&pdev->dev, base, PSYS_MMID,
+ 				       &ipdata->hw_variant);
+ 	if (IS_ERR(psys_adev->mmu)) {
+-		dev_err_probe(&pdev->dev, PTR_ERR(psys_adev),
++		dev_err_probe(&pdev->dev, PTR_ERR(psys_adev->mmu),
+ 			      "ipu7_mmu_init(psys_adev->mmu) failed\n");
+ 		put_device(&psys_adev->auxdev.dev);
+ 		kfree(pdata);
+@@ -2385,8 +2385,8 @@ static int ipu7_map_fw_code_region(struct ipu7_bus_device *sys,
+ 
+ 	ipu7_dma_sync_sgtable(sys, sgt);
+ 
+-	dev_dbg(dev, "fw code region mapped at 0x%llx entries %d\n",
+-		sgt->sgl->dma_address, sgt->nents);
++	dev_dbg(dev, "fw code region mapped at 0x%pad entries %d\n",
++		&sgt->sgl->dma_address, sgt->nents);
+ 
+ out:
+ 	kfree(pages);
+@@ -2512,8 +2512,8 @@ static int ipu7_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+ 
+ 	phys = pci_resource_start(pdev, IPU_PCI_BAR);
+ 	pb_phys = pci_resource_start(pdev, IPU_PCI_PBBAR);
+-	dev_info(dev, "IPU7 PCI BAR0 base %llx BAR2 base %llx\n",
+-		 phys, pb_phys);
++	dev_info(dev, "IPU7 PCI BAR0 base %pap BAR2 base %pap\n",
++		 &phys, &pb_phys);
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
+ 	ret = pcim_iomap_regions(pdev, BIT(IPU_PCI_BAR) | BIT(IPU_PCI_PBBAR),
+@@ -2850,10 +2850,8 @@ static int ipu7_runtime_resume(struct device *dev)
+ }
+ 
+ static const struct dev_pm_ops ipu7_pm_ops = {
+-	SET_SYSTEM_SLEEP_PM_OPS(&ipu7_suspend, &ipu7_resume)
+-	SET_RUNTIME_PM_OPS(&ipu7_suspend,	/* Same as in suspend flow */
+-			   &ipu7_runtime_resume,
+-			   NULL)
++	SYSTEM_SLEEP_PM_OPS(&ipu7_suspend, &ipu7_resume)
++	RUNTIME_PM_OPS(&ipu7_suspend, &ipu7_runtime_resume, NULL)
+ };
+ 
+ static const struct pci_device_id ipu7_pci_tbl[] = {
+diff --git a/patch/v6.17_iot/0001-media-pci-set-snoop-1-to-fix-cache-line-issue.patch b/patch/v6.17_iot/0001-media-pci-set-snoop-1-to-fix-cache-line-issue.patch
+new file mode 100644
+index 000000000..8f53255e2
+--- /dev/null
++++ b/patch/v6.17_iot/0001-media-pci-set-snoop-1-to-fix-cache-line-issue.patch
+@@ -0,0 +1,27 @@
++From 3e017d911c8ef8b12dc523c3fc73367d9f9d20b9 Mon Sep 17 00:00:00 2001
++From: linya14x <linx.yang@intel.com>
++Date: Thu, 20 Mar 2025 15:39:16 +0800
++Subject: [PATCH] media: pci: set snoop = 1 to fix cache line issue
++
++Signed-off-by: linya14x <linx.yang@intel.com>
++Signed-off-by: zouxiaoh <xiaohong.zou@intel.com>
++---
++ drivers/media/pci/intel/ipu7/ipu7-isys-video.c | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-video.c b/drivers/media/pci/intel/ipu7/ipu7-isys-video.c
++index e7507f533c1e..541a55bcb8f3 100644
++--- a/drivers/media/pci/intel/ipu7/ipu7-isys-video.c
+++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-video.c
++@@ -452,7 +452,7 @@ static int ipu7_isys_fw_pin_cfg(struct ipu7_isys_video *av,
++ 	output_pin->link.dest = IPU_INSYS_OUTPUT_LINK_DEST_MEM;
++ 	output_pin->link.use_sw_managed = 1;
++ 	/* TODO: set the snoop bit for metadata capture */
++-	output_pin->link.is_snoop = 0;
+++	output_pin->link.is_snoop = 1;
++
++ 	/* output pin crop */
++ 	output_pin->crop.line_top = 0;
++--
++2.34.1
++
+diff --git a/patch/v6.17_iot/0002-INT3472-Support-LT6911GXD.patch b/patch/v6.17_iot/0002-INT3472-Support-LT6911GXD.patch
+new file mode 100644
+index 000000000..241dc6e0a
+--- /dev/null
++++ b/patch/v6.17_iot/0002-INT3472-Support-LT6911GXD.patch
+@@ -0,0 +1,58 @@
++From 0bd06fd0601c1a854afb09f7876f79b92e9af70e Mon Sep 17 00:00:00 2001
++From: linya14x <linx.yang@intel.com>
++Date: Mon, 8 Sep 2025 15:41:24 +0800
++Subject: [PATCH] INT3472: Support LT6911GXD
++
++Signed-off-by: linya14x <linx.yang@intel.com>
++---
++ drivers/platform/x86/intel/int3472/discrete.c | 7 ++++++-
++ include/linux/platform_data/x86/int3472.h     | 1 +
++ 2 files changed, 7 insertions(+), 1 deletion(-)
++
++diff --git a/drivers/platform/x86/intel/int3472/discrete.c b/drivers/platform/x86/intel/int3472/discrete.c
++index 4c0aed6e62..cdbb3a7b16 100644
++--- a/drivers/platform/x86/intel/int3472/discrete.c
+++++ b/drivers/platform/x86/intel/int3472/discrete.c
++@@ -177,6 +177,10 @@ static void int3472_get_con_id_and_polarity(struct int3472_discrete_device *int3
++ 	}
++
++ 	switch (*type) {
+++	case INT3472_GPIO_TYPE_HOTPLUG_DETECT:
+++		*con_id = "hpd";
+++		*gpio_flags = GPIO_ACTIVE_HIGH;
+++		break;
++ 	case INT3472_GPIO_TYPE_RESET:
++ 		*con_id = "reset";
++ 		*gpio_flags = GPIO_ACTIVE_LOW;
++@@ -292,6 +296,7 @@ static int skl_int3472_handle_gpio_resources(struct acpi_resource *ares,
++ 	switch (type) {
++ 	case INT3472_GPIO_TYPE_RESET:
++ 	case INT3472_GPIO_TYPE_POWERDOWN:
+++	case INT3472_GPIO_TYPE_HOTPLUG_DETECT:
++ 		ret = skl_int3472_map_gpio_to_sensor(int3472, agpio, con_id, gpio_flags);
++		if (ret)
++ 			err_msg = "Failed to map GPIO pin to sensor\n";
++@@ -430,7 +435,7 @@ static int skl_int3472_discrete_probe(struct platform_device *pdev)
++ 		return ret;
++ 	}
++
++-	if (cldb.control_logic_type != 1) {
+++	if (cldb.control_logic_type != 1 && cldb.control_logic_type != 5) {
++ 		dev_err(&pdev->dev, "Unsupported control logic type %u\n",
++ 			cldb.control_logic_type);
++ 		return -EINVAL;
++diff --git a/include/linux/platform_data/x86/int3472.h b/include/linux/platform_data/x86/int3472.h
++index 78276a11c4..1571e9157f 100644
++--- a/include/linux/platform_data/x86/int3472.h
+++++ b/include/linux/platform_data/x86/int3472.h
++@@ -27,6 +27,7 @@
++ #define INT3472_GPIO_TYPE_CLK_ENABLE				0x0c
++ #define INT3472_GPIO_TYPE_PRIVACY_LED				0x0d
++ #define INT3472_GPIO_TYPE_HANDSHAKE				0x12
+++#define INT3472_GPIO_TYPE_HOTPLUG_DETECT			0x13
++
++ #define INT3472_PDEV_MAX_NAME_LEN				23
++ #define INT3472_MAX_SENSOR_GPIOS				3
++--
++2.43.0
++
+diff --git a/patch/v6.17_iot/0003-media-i2c-add-support-for-lt6911gxd.patch b/patch/v6.17_iot/0003-media-i2c-add-support-for-lt6911gxd.patch
+new file mode 100644
+index 000000000..5a287d17c
+--- /dev/null
++++ b/patch/v6.17_iot/0003-media-i2c-add-support-for-lt6911gxd.patch
+@@ -0,0 +1,47 @@
++From b44192f0e7db68a65553dfe9a326edb8e180a461 Mon Sep 17 00:00:00 2001
++From: linya14x <linx.yang@intel.com>
++Date: Wed, 11 Dec 2024 17:11:18 +0800
++Subject: [PATCH] media: i2c: add support for lt6911gxd
++
++Signed-off-by: linya14x <linx.yang@intel.com>
++Signed-off-by: zouxiaoh <xiaohong.zou@intel.com>
++---
++ drivers/media/i2c/Kconfig  | 12 ++++++++++++
++ drivers/media/i2c/Makefile |  1 +
++ 2 files changed, 13 insertions(+)
++
++diff --git a/drivers/media/i2c/Kconfig b/drivers/media/i2c/Kconfig
++index 8ba096b8ebca..2a32ea1d5571 100644
++--- a/drivers/media/i2c/Kconfig
+++++ b/drivers/media/i2c/Kconfig
++@@ -264,6 +264,18 @@ config VIDEO_IMX415
++ 	  To compile this driver as a module, choose M here: the
++ 	  module will be called imx415.
++
+++config VIDEO_LT6911GXD
+++        tristate "Lontium LT6911GXD decoder"
+++        depends on ACPI || COMPILE_TEST
+++        select V4L2_CCI_I2C
+++        help
+++          This is a Video4Linux2 sensor-level driver for the Lontium
+++          LT6911GXD HDMI to MIPI CSI-2 bridge.
+++
+++          To compile this driver as a module, choose M here: the
+++          module will be called lt6911gxd.
+++
+++
++ config VIDEO_MAX9271_LIB
++ 	tristate
++
++diff --git a/drivers/media/i2c/Makefile b/drivers/media/i2c/Makefile
++index fbb988bd067a..acf75bc8c3b1 100644
++--- a/drivers/media/i2c/Makefile
+++++ b/drivers/media/i2c/Makefile
++@@ -157,3 +157,4 @@ obj-$(CONFIG_VIDEO_VP27SMPX) += vp27smpx.o
++ obj-$(CONFIG_VIDEO_VPX3220) += vpx3220.o
++ obj-$(CONFIG_VIDEO_WM8739) += wm8739.o
++ obj-$(CONFIG_VIDEO_WM8775) += wm8775.o
+++obj-$(CONFIG_VIDEO_LT6911GXD) += lt6911gxd.o
++--
++2.34.1
++
+diff --git a/patch/v6.17_iot/0004-media-pci-enable-lt6911gxd-in-ipu-bridge.patch b/patch/v6.17_iot/0004-media-pci-enable-lt6911gxd-in-ipu-bridge.patch
+new file mode 100644
+index 000000000..857cb9985
+--- /dev/null
++++ b/patch/v6.17_iot/0004-media-pci-enable-lt6911gxd-in-ipu-bridge.patch
+@@ -0,0 +1,26 @@
++From 320ed1876280472444fb425c28989b67e028e971 Mon Sep 17 00:00:00 2001
++From: linya14x <linx.yang@intel.com>
++Date: Sat, 6 Sep 2025 17:14:52 +0800
++Subject: [PATCH] media: pci: enable lt6911gxd in ipu-bridge
++
++Signed-off-by: linya14x <linx.yang@intel.com>
++---
++ drivers/media/pci/intel/ipu-bridge.c | 2 ++
++ 1 file changed, 2 insertions(+)
++
++diff --git a/drivers/media/pci/intel/ipu-bridge.c b/drivers/media/pci/intel/ipu-bridge.c
++index 4e579352ab..e58b354ad9 100644
++--- a/drivers/media/pci/intel/ipu-bridge.c
+++++ b/drivers/media/pci/intel/ipu-bridge.c
++@@ -92,6 +92,8 @@ static const struct ipu_sensor_config ipu_supported_sensors[] = {
++ 	IPU_SENSOR_CONFIG("OVTI8856", 3, 180000000, 360000000, 720000000),
++ 	/* Toshiba T4KA3 */
++ 	IPU_SENSOR_CONFIG("XMCC0003", 1, 321468000),
+++	/* Lontium lt6911gxd */
+++	IPU_SENSOR_CONFIG("INTC1124", 0),
++ };
++
++ static const struct ipu_property_names prop_names = {
++--
++2.43.0
++
+diff --git a/patch/v6.17_iot/0005-ipu-bridge-add-CPHY-support.patch b/patch/v6.17_iot/0005-ipu-bridge-add-CPHY-support.patch
+new file mode 100644
+index 000000000..8eaa8a645
+--- /dev/null
++++ b/patch/v6.17_iot/0005-ipu-bridge-add-CPHY-support.patch
+@@ -0,0 +1,110 @@
++From 9ce464a2bea2260869bc18f66b60887b930cd16b Mon Sep 17 00:00:00 2001
++From: Chen Meng J <meng.j.chen@intel.com>
++Date: Wed, 20 Nov 2024 17:56:07 +0800
++Subject: [PATCH] ipu-bridge: add CPHY support
++
++get DPHY or CPHY mode when parse ssdb
++
++Signed-off-by: Chen Meng J <meng.j.chen@intel.com>
++Signed-off-by: zouxiaoh <xiaohong.zou@intel.com>
++---
++ drivers/media/pci/intel/ipu-bridge.c | 23 ++++++++++++++++++++++-
++ include/media/ipu-bridge.h           |  7 +++++--
++ 2 files changed, 27 insertions(+), 3 deletions(-)
++
++diff --git a/drivers/media/pci/intel/ipu-bridge.c b/drivers/media/pci/intel/ipu-bridge.c
++index da6683efbbd8..fe5a838adea7 100644
++--- a/drivers/media/pci/intel/ipu-bridge.c
+++++ b/drivers/media/pci/intel/ipu-bridge.c
++@@ -35,6 +35,9 @@
++  */
++ #define IVSC_DEV_NAME "intel_vsc"
++
+++#define PHY_MODE_DPHY  0
+++#define PHY_MODE_CPHY  1
+++
++ /*
++  * Extend this array with ACPI Hardware IDs of devices known to be working
++  * plus the number of link-frequencies expected by their drivers, along with
++@@ -306,6 +309,7 @@ int ipu_bridge_parse_ssdb(struct acpi_device *adev, struct ipu_sensor *sensor)
++
++ 	sensor->link = ssdb.link;
++ 	sensor->lanes = ssdb.lanes;
+++	sensor->phyconfig = ssdb.phyconfig;
++ 	sensor->mclkspeed = ssdb.mclkspeed;
++ 	sensor->rotation = ipu_bridge_parse_rotation(adev, &ssdb);
++ 	sensor->orientation = ipu_bridge_parse_orientation(adev);
++@@ -324,6 +328,7 @@ static void ipu_bridge_create_fwnode_properties(
++ {
++ 	struct ipu_property_names *names = &sensor->prop_names;
++ 	struct software_node *nodes = sensor->swnodes;
+++	u8 bus_type;
++
++ 	sensor->prop_names = prop_names;
++
++@@ -381,9 +386,16 @@ static void ipu_bridge_create_fwnode_properties(
++ 			PROPERTY_ENTRY_REF_ARRAY("lens-focus", sensor->vcm_ref);
++ 	}
++
+++	if (sensor->phyconfig == PHY_MODE_DPHY)
+++		bus_type = V4L2_FWNODE_BUS_TYPE_CSI2_DPHY;
+++	else if (sensor->phyconfig == PHY_MODE_CPHY)
+++		bus_type = V4L2_FWNODE_BUS_TYPE_CSI2_CPHY;
+++	else
+++		bus_type = V4L2_FWNODE_BUS_TYPE_GUESS;
+++
++ 	sensor->ep_properties[0] = PROPERTY_ENTRY_U32(
++ 					sensor->prop_names.bus_type,
++-					V4L2_FWNODE_BUS_TYPE_CSI2_DPHY);
+++					bus_type);
++ 	sensor->ep_properties[1] = PROPERTY_ENTRY_U32_ARRAY_LEN(
++ 					sensor->prop_names.data_lanes,
++ 					bridge->data_lanes, sensor->lanes);
++@@ -403,6 +415,15 @@ static void ipu_bridge_create_fwnode_properties(
++ 	sensor->ipu_properties[1] = PROPERTY_ENTRY_REF_ARRAY(
++ 					sensor->prop_names.remote_endpoint,
++ 					sensor->remote_ref);
+++
+++	/*
+++	 * TODO: Remove the bus_type property for IPU
+++	 * 1. keep fwnode property list no change.
+++	 * 2. IPU driver needs to get bus_type from remote sensor ep.
+++	 */
+++	sensor->ipu_properties[2] = PROPERTY_ENTRY_U32
+++					(sensor->prop_names.bus_type,
+++					bus_type);
++ }
++
++ static void ipu_bridge_init_swnode_names(struct ipu_sensor *sensor)
++diff --git a/include/media/ipu-bridge.h b/include/media/ipu-bridge.h
++index 16fac765456e..f8642d09968d 100644
++--- a/include/media/ipu-bridge.h
+++++ b/include/media/ipu-bridge.h
++@@ -91,7 +91,9 @@ struct ipu_sensor_ssdb {
++ 	u8 controllogicid;
++ 	u8 reserved1[3];
++ 	u8 mclkport;
++-	u8 reserved2[13];
+++	u8 reserved2[5];
+++	u8 phyconfig;
+++	u8 reserved3[7];
++ } __packed;
++
++ struct ipu_property_names {
++@@ -139,11 +141,12 @@ struct ipu_sensor {
++ 	u32 rotation;
++ 	enum v4l2_fwnode_orientation orientation;
++ 	const char *vcm_type;
+++	u8 phyconfig;
++
++ 	struct ipu_property_names prop_names;
++ 	struct property_entry ep_properties[5];
++ 	struct property_entry dev_properties[5];
++-	struct property_entry ipu_properties[3];
+++	struct property_entry ipu_properties[4];
++ 	struct property_entry ivsc_properties[1];
++ 	struct property_entry ivsc_sensor_ep_properties[4];
++ 	struct property_entry ivsc_ipu_ep_properties[4];
++--
++2.34.1
++
+diff --git a/patch/v6.17_iot/0006-media-ipu-Dma-sync-at-buffer_prepare-callback-as-DMA.patch b/patch/v6.17_iot/0006-media-ipu-Dma-sync-at-buffer_prepare-callback-as-DMA.patch
+new file mode 100644
+index 000000000..2f16708c8
+--- /dev/null
++++ b/patch/v6.17_iot/0006-media-ipu-Dma-sync-at-buffer_prepare-callback-as-DMA.patch
+@@ -0,0 +1,43 @@
++From 68c7f92e251cd44c17b91ed141ae18688e2d4682 Mon Sep 17 00:00:00 2001
++From: Bingbu Cao <bingbu.cao@intel.com>
++Date: Thu, 20 Mar 2025 16:41:37 +0800
++Subject: [PATCH] media: ipu: Dma sync at buffer_prepare callback as DMA is
++ non-coherent
++
++Test Platform:
++PTLRVP
++LNLRVP
++
++Signed-off-by: Bingbu Cao <bingbu.cao@intel.com>
++Signed-off-by: zouxiaoh <xiaohong.zou@intel.com>
++---
++ drivers/media/pci/intel/ipu7/ipu7-isys-queue.c | 5 +++++
++ 1 file changed, 5 insertions(+)
++
++diff --git a/drivers/media/pci/intel/ipu7/ipu7-isys-queue.c b/drivers/media/pci/intel/ipu7/ipu7-isys-queue.c
++index 2451abe00..8a7f5bb3a 100644
++--- a/drivers/media/pci/intel/ipu7/ipu7-isys-queue.c
+++++ b/drivers/media/pci/intel/ipu7/ipu7-isys-queue.c
++@@ -92,7 +92,9 @@ static int ipu7_isys_queue_setup(struct vb2_queue *q, unsigned int *num_buffers,
++ static int ipu7_isys_buf_prepare(struct vb2_buffer *vb)
++ {
++ 	struct ipu7_isys_queue *aq = vb2_queue_to_isys_queue(vb->vb2_queue);
+++	struct ipu7_isys *isys = vb2_get_drv_priv(vb->vb2_queue);
++ 	struct ipu7_isys_video *av = ipu7_isys_queue_to_video(aq);
+++	struct sg_table *sg = vb2_dma_sg_plane_desc(vb, 0);
++ 	struct device *dev = &av->isys->adev->auxdev.dev;
++ 	u32 bytesperline = av->pix_fmt.bytesperline;
++ 	u32 height = av->pix_fmt.height;
++@@ -107,6 +109,9 @@ static int ipu7_isys_buf_prepare(struct vb2_buffer *vb)
++ 		av->vdev.name, bytesperline, height);
++ 	vb2_set_plane_payload(vb, 0, bytesperline * height);
++
+++	/* assume IPU is not DMA coherent */
+++	ipu7_dma_sync_sgtable(isys->adev, sg);
+++
++ 	return 0;
++ }
++
++--
++2.34.1
++
+diff --git a/patch/v6.17_iot/0007-staging-media-ipu7-remove-from-the-Makefile-Kconfig.patch b/patch/v6.17_iot/0007-staging-media-ipu7-remove-from-the-Makefile-Kconfig.patch
+new file mode 100644
+index 000000000..b81d4af3c
+--- /dev/null
++++ b/patch/v6.17_iot/0007-staging-media-ipu7-remove-from-the-Makefile-Kconfig.patch
+@@ -0,0 +1,38 @@
++From 9be4f081b7a0e815cb59273f09b513a84a3b1159 Mon Sep 17 00:00:00 2001
++From: linya14x <linx.yang@intel.com>
++Date: Thu, 11 Sep 2025 15:24:17 +0800
++Subject: [PATCH] staging: media: ipu7 remove from the Makefile & Kconfig
++
++Signed-off-by: linya14x linx.yang@intel.com
++---
++ drivers/staging/media/Kconfig  | 2 +-
++ drivers/staging/media/Makefile | 2 +-
++ 2 files changed, 2 insertions(+), 2 deletions(-)
++
++diff --git a/drivers/staging/media/Kconfig b/drivers/staging/media/Kconfig
++index ab250c89cd..6da8850372 100644
++--- a/drivers/staging/media/Kconfig
+++++ b/drivers/staging/media/Kconfig
++@@ -28,7 +28,7 @@ source "drivers/staging/media/imx/Kconfig"
++
++ source "drivers/staging/media/ipu3/Kconfig"
++
++-source "drivers/staging/media/ipu7/Kconfig"
+++#source "drivers/staging/media/ipu7/Kconfig"
++
++ source "drivers/staging/media/max96712/Kconfig"
++
++diff --git a/drivers/staging/media/Makefile b/drivers/staging/media/Makefile
++index 4a073938b2..22d19580e9 100644
++--- a/drivers/staging/media/Makefile
+++++ b/drivers/staging/media/Makefile
++@@ -8,5 +8,5 @@ obj-$(CONFIG_VIDEO_STARFIVE_CAMSS)	+= starfive/
++ obj-$(CONFIG_VIDEO_SUNXI)	+= sunxi/
++ obj-$(CONFIG_VIDEO_TEGRA)	+= tegra-video/
++ obj-$(CONFIG_VIDEO_IPU3_IMGU)	+= ipu3/
++-obj-$(CONFIG_VIDEO_INTEL_IPU7)	+= ipu7/
+++#obj-$(CONFIG_VIDEO_INTEL_IPU7)	+= ipu7/
++ obj-$(CONFIG_DVB_AV7110)	+= av7110/
++--
++2.43.0
++
+diff --git a/patch/v6.17_iot/0008-media-pci-enable-ipu7-in-the-Makefile-Kconfig.patch b/patch/v6.17_iot/0008-media-pci-enable-ipu7-in-the-Makefile-Kconfig.patch
+new file mode 100644
+index 000000000..f081649c2
+--- /dev/null
++++ b/patch/v6.17_iot/0008-media-pci-enable-ipu7-in-the-Makefile-Kconfig.patch
+@@ -0,0 +1,35 @@
++From 9a0f07e3796d8c0f74621580c3b701e7ccd88a30 Mon Sep 17 00:00:00 2001
++From: linya14x <linx.yang@intel.com>
++Date: Thu, 11 Sep 2025 15:36:52 +0800
++Subject: [PATCH] media: pci: enable ipu7 in the Makefile & Kconfig
++
++Signed-off-by: linya14x <linx.yang@intel.com>
++---
++ drivers/media/pci/intel/Kconfig  | 1 +
++ drivers/media/pci/intel/Makefile | 1 +
++ 2 files changed, 2 insertions(+)
++
++diff --git a/drivers/media/pci/intel/Kconfig b/drivers/media/pci/intel/Kconfig
++index d9fcddce02..948cda08ff 100644
++--- a/drivers/media/pci/intel/Kconfig
+++++ b/drivers/media/pci/intel/Kconfig
++@@ -2,6 +2,7 @@
++
++ source "drivers/media/pci/intel/ipu3/Kconfig"
++ source "drivers/media/pci/intel/ipu6/Kconfig"
+++source "drivers/media/pci/intel/ipu7/Kconfig"
++ source "drivers/media/pci/intel/ivsc/Kconfig"
++
++ config IPU_BRIDGE
++diff --git a/drivers/media/pci/intel/Makefile b/drivers/media/pci/intel/Makefile
++index 3a2cc65671..4886768ce1 100644
++--- a/drivers/media/pci/intel/Makefile
+++++ b/drivers/media/pci/intel/Makefile
++@@ -6,3 +6,4 @@ obj-$(CONFIG_IPU_BRIDGE) += ipu-bridge.o
++ obj-y	+= ipu3/
++ obj-y	+= ivsc/
++ obj-$(CONFIG_VIDEO_INTEL_IPU6)	+= ipu6/
+++obj-$(CONFIG_VIDEO_INTEL_IPU6)  += ipu7/
++--
++2.43.0
++
+diff --git a/patch/v6.17_iot/0009-max9x-add-config-in-makefile-kconfig.patch b/patch/v6.17_iot/0009-max9x-add-config-in-makefile-kconfig.patch
+new file mode 100644
+index 000000000..77b336319
+--- /dev/null
++++ b/patch/v6.17_iot/0009-max9x-add-config-in-makefile-kconfig.patch
+@@ -0,0 +1,54 @@
++From d904a1e1ab6c0a1682ae50547104a8636c698656 Mon Sep 17 00:00:00 2001
++From: hepengpx <pengpengx.he@intel.com>
++Date: Wed, 27 Aug 2025 11:09:54 +0800
++Subject: [PATCH 1/2] max9x: add config in makefile & kconfig
++
++Signed-off-by: hepengpx <pengpengx.he@intel.com>
++---
++ drivers/media/i2c/Kconfig  | 16 ++++++++++++++++
++ drivers/media/i2c/Makefile |  2 ++
++ 2 files changed, 18 insertions(+)
++
++diff --git a/drivers/media/i2c/Kconfig b/drivers/media/i2c/Kconfig
++index 6237fe804a..c629820238 100644
++--- a/drivers/media/i2c/Kconfig
+++++ b/drivers/media/i2c/Kconfig
++@@ -267,6 +267,22 @@ config VIDEO_IMX415
++ 	  To compile this driver as a module, choose M here: the
++ 	  module will be called imx415.
++
+++config VIDEO_ISX031
+++	tristate "ISX031 sensor support"
+++	depends on VIDEO_DEV && I2C
+++	select VIDEO_V4L2_SUBDEV_API
+++	depends on MEDIA_CAMERA_SUPPORT
+++	help
+++	  This is a Video4Linux2 sensor-level driver for ISX031 camera.
+++
+++config VIDEO_MAX9X
+++	tristate "MAX9X serdes support"
+++	depends on VIDEO_DEV && I2C
+++	select VIDEO_V4L2_SUBDEV_API
+++	depends on MEDIA_CAMERA_SUPPORT
+++	help
+++	  This is a Video4Linux2 sensor-level driver for MAX9X serdes.
+++
++ config VIDEO_MAX9271_LIB
++ 	tristate
++
++diff --git a/drivers/media/i2c/Makefile b/drivers/media/i2c/Makefile
++index 5873d29433..9171b410e6 100644
++--- a/drivers/media/i2c/Makefile
+++++ b/drivers/media/i2c/Makefile
++@@ -61,6 +61,8 @@ obj-$(CONFIG_VIDEO_IMX412) += imx412.o
++ obj-$(CONFIG_VIDEO_IMX415) += imx415.o
++ obj-$(CONFIG_VIDEO_IR_I2C) += ir-kbd-i2c.o
++ obj-$(CONFIG_VIDEO_ISL7998X) += isl7998x.o
+++obj-$(CONFIG_VIDEO_MAX9X) += max9x/
+++obj-$(CONFIG_VIDEO_ISX031) += isx031.o
++ obj-$(CONFIG_VIDEO_KS0127) += ks0127.o
++ obj-$(CONFIG_VIDEO_LM3560) += lm3560.o
++ obj-$(CONFIG_VIDEO_LM3646) += lm3646.o
++--
++2.34.1
++
+diff --git a/patch/v6.17_iot/0010-drivers-media-set-v4l2_subdev_enable_streams_api-tru.patch b/patch/v6.17_iot/0010-drivers-media-set-v4l2_subdev_enable_streams_api-tru.patch
+new file mode 100644
+index 000000000..6f16df1bd
+--- /dev/null
++++ b/patch/v6.17_iot/0010-drivers-media-set-v4l2_subdev_enable_streams_api-tru.patch
+@@ -0,0 +1,27 @@
++From 8ceeec3023334389a058b317fdf8c178bd4a03d7 Mon Sep 17 00:00:00 2001
++From: hepengpx <pengpengx.he@intel.com>
++Date: Wed, 27 Aug 2025 11:10:06 +0800
++Subject: [PATCH 2/2] drivers: media: set v4l2_subdev_enable_streams_api=true
++ for WA
++
++Signed-off-by: hepengpx <pengpengx.he@intel.com>
++---
++ drivers/media/v4l2-core/v4l2-subdev.c | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/drivers/media/v4l2-core/v4l2-subdev.c b/drivers/media/v4l2-core/v4l2-subdev.c
++index 4fd25fea3b..60a05561f3 100644
++--- a/drivers/media/v4l2-core/v4l2-subdev.c
+++++ b/drivers/media/v4l2-core/v4l2-subdev.c
++@@ -32,7 +32,7 @@
++  * 'v4l2_subdev_enable_streams_api' to 1 below.
++  */
++
++-static bool v4l2_subdev_enable_streams_api;
+++static bool v4l2_subdev_enable_streams_api = true;
++ #endif
++
++ /*
++--
++2.34.1
++
+-- 
+2.25.1
+

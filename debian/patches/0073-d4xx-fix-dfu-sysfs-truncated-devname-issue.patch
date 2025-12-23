@@ -1,0 +1,122 @@
+From 81e9c57422d19280701cc29824073e644e67708c Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Fri, 9 Jan 2026 11:52:47 -0700
+Subject: [PATCH 73/73] d4xx: fix dfu sysfs truncated devname issue
+
+```
+[   68.734388] d4xx 1-0012: ds5_read(): i2c read 0x5020: 0xdead
+[   68.734390] d4xx 1-0012: ds5_chrdev_init()
+[   68.734411] sysfs: cannot create duplicate filename '/devices/virtual/d4xx-class/D4XX d4xx-dfu a-'
+[   68.734413] CPU: 6 UID: 0 PID: 2327 Comm: modprobe Tainted: G        W  OE       6.17.0-1006-oem #6-Ubuntu PREEMPT(voluntary)
+[   68.734415] Tainted: [W]=WARN, [O]=OOT_MODULE, [E]=UNSIGNED_MODULE
+[   68.734416] Hardware name: Intel Corporation Panther Lake Client Platform/PTL-UH DDR5 Embedded CRB, BIOS PTLPFWI1.R00.3332.D52.2509040547 09/04/2025
+[   68.734417] Call Trace:
+[   68.734418]  <TASK>
+[   68.734421]  dump_stack_lvl+0x76/0xa0
+[   68.734425]  dump_stack+0x10/0x20
+[   68.734426]  sysfs_warn_dup+0x8a/0xb0
+[   68.734430]  sysfs_create_dir_ns+0xde/0xf0
+[   68.734433]  kobject_add_internal+0xa8/0x2f0
+[   68.734436]  kobject_add+0x92/0x100
+[   68.734437]  ? get_device_parent+0xd0/0x210
+[   68.734441]  device_add+0xdf/0x720
+[   68.734443]  device_create_groups_vargs+0x118/0x140
+[   68.734445]  device_create+0x50/0x80
+[   68.734450]  ds5_probe+0xcbd/0x17f0 [d4xx]
+[   68.734455]  i2c_device_probe+0x198/0x390
+[   68.734457]  really_probe+0xee/0x3c0
+[   68.734459]  __driver_probe_device+0x8c/0x180
+[   68.734461]  driver_probe_device+0x24/0xd0
+[   68.734462]  __device_attach_driver+0xcd/0x170
+[   68.734463]  ? __pfx___device_attach_driver+0x10/0x10
+[   68.734464]  bus_for_each_drv+0x93/0xf0
+[   68.734465]  __device_attach+0xb5/0x1d0
+[   68.734467]  device_initial_probe+0x13/0x20
+[   68.734468]  bus_probe_device+0x9f/0xb0
+[   68.734469]  device_add+0x511/0x720
+[   68.734470]  device_register+0x1a/0x30
+[   68.734472]  i2c_new_client_device+0x209/0x460
+[   68.734474]  v4l2_i2c_new_subdev_board+0x5e/0x100 [videodev]
+[   68.734486]  isys_probe+0xa23/0xd90 [intel_ipu7_isys]
+[   68.734493]  ? __pfx_isys_probe+0x10/0x10 [intel_ipu7_isys]
+[   68.734497]  auxiliary_bus_probe+0x3e/0xa0
+[   68.734499]  really_probe+0xee/0x3c0
+[   68.734500]  __driver_probe_device+0x8c/0x180
+[   68.734501]  driver_probe_device+0x24/0xd0
+[   68.734503]  __driver_attach+0x10b/0x210
+[   68.734504]  ? __pfx___driver_attach+0x10/0x10
+[   68.734505]  bus_for_each_dev+0x89/0xf0
+[   68.734506]  driver_attach+0x1e/0x30
+[   68.734507]  bus_add_driver+0x14e/0x290
+[   68.734508]  driver_register+0x5e/0x130
+[   68.734510]  __auxiliary_driver_register+0x73/0xf0
+[   68.734511]  ? __pfx_isys_driver_init+0x10/0x10 [intel_ipu7_isys]
+[   68.734516]  isys_driver_init+0x23/0xff0 [intel_ipu7_isys]
+[   68.734519]  do_one_initcall+0x5a/0x340
+[   68.734522]  do_init_module+0x97/0x2c0
+[   68.734526]  load_module+0x99c/0xac0
+[   68.734527]  init_module_from_file+0x95/0x100
+[   68.734529]  idempotent_init_module+0x10f/0x300
+[   68.734531]  __x64_sys_finit_module+0x73/0xe0
+[   68.734533]  x64_sys_call+0x1784/0x2680
+[   68.734534]  do_syscall_64+0x80/0xa20
+[   68.734537]  ? __rseq_handle_notify_resume+0x36/0x70
+[   68.734540]  ? arch_exit_to_user_mode_prepare.isra.0+0xc2/0xe0
+[   68.734541]  ? do_syscall_64+0xb6/0xa20
+[   68.734543]  ? putname+0x65/0x90
+[   68.734546]  ? do_sys_openat2+0xa2/0xf0
+[   68.734549]  ? __x64_sys_openat+0x54/0xa0
+[   68.734550]  ? arch_exit_to_user_mode_prepare.isra.0+0xd/0xe0
+[   68.734552]  ? do_syscall_64+0xb6/0xa20
+[   68.734553]  ? arch_exit_to_user_mode_prepare.isra.0+0xd/0xe0
+[   68.734554]  ? do_syscall_64+0xb6/0xa20
+[   68.734555]  ? exc_page_fault+0x90/0x1b0
+[   68.734556]  entry_SYSCALL_64_after_hwframe+0x76/0x7e
+[   68.734558] RIP: 0033:0x79620e92728d
+[   68.734560] Code: ff c3 66 2e 0f 1f 84 00 00 00 00 00 90 f3 0f 1e fa 48 89 f8 48 89 f7 48 89 d6 48 89 ca 4d 89 c2 4d 89 c8 4c 8b 4c 24 08 0f 05 <48> 3d 01 f0 ff ff 73 01 c3 48 8b 0d 5b bb 0d 00 f7 d8 64 89 01 48
+[   68.734561] RSP: 002b:00007ffcdc3577e8 EFLAGS: 00000246 ORIG_RAX: 0000000000000139
+[   68.734562] RAX: ffffffffffffffda RBX: 000055d7420a7340 RCX: 000079620e92728d
+[   68.734563] RDX: 0000000000000004 RSI: 000055d7420b21a0 RDI: 0000000000000010
+[   68.734564] RBP: 00007ffcdc3578a0 R08: 0000000000000040 R09: 00007ffcdc357830
+[   68.734564] R10: 000079620ea03b20 R11: 0000000000000246 R12: 000055d7420b21a0
+[   68.734565] R13: 0000000000040000 R14: 000055d7420a7070 R15: 000055d7420b21a0
+[   68.734566]  </TASK>
+[   68.734566] kobject: kobject_add_internal failed for D4XX d4xx-dfu a- with -EEXIST, don't try to register things with the same name in the same directory.
+[   68.734574] d4xx 1-0012: Could not create device
+[   68.734592] d4xx 1-0012: graceful fallback due to unresponsive d4xx, isolated SerDes GMSL A single-link
+[   68.734593] d4xx 1-0012: remove unresponding serializer i2c device 0x42
+
+```
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/d4xx.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/i2c/d4xx.c b/drivers/media/i2c/d4xx.c
+index 76fb0e779..e407563df 100644
+--- a/drivers/media/i2c/d4xx.c
++++ b/drivers/media/i2c/d4xx.c
+@@ -6414,7 +6414,7 @@ static int ds5_chrdev_init(struct i2c_client *c, struct ds5 *state)
+ 	char suffix = pdata->suffix;
+ #endif
+ 	struct device *chr_dev;
+-	char dev_name[sizeof(DS5_DRIVER_NAME_DFU) + 8];
++	char dev_name[sizeof(DS5_DRIVER_NAME_DFU) + 10];
+ 	dev_t *dev_num = &c->dev.devt;
+ 	int ret;
+ 
+@@ -6452,8 +6452,8 @@ static int ds5_chrdev_init(struct i2c_client *c, struct ds5 *state)
+ 	struct d4xx_subdev_info *spdata = &pdata->subdev_info[0];
+ 	/*
+ 	 * suffix syntaxe for multiple D457 connected to 1 Deser :
+-	 * - IPU7 both standalone or aggregated links <a|b|c|d>-<mipi port index>
+-	 * - IPU6 when standalone <a|b|c|d|e|f> when aggregated <g|h|i|j|k|l|m>
++	 * - IPU7/IPU6 upstream both standalone or aggregated links <a|b|c|d>-<mipi port index>
++	 * - IPU6 legacy when standalone <a|b|c|d|e|f> when aggregated <g|h|i|j|k|l|m>
+ 	 */
+ 	if (strnlen(spdata->suffix, sizeof(spdata->suffix)) > 1) {
+ 		snprintf(dev_name, sizeof(dev_name), "D4XX %s %s",
+-- 
+2.25.1
+

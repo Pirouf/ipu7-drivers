@@ -1,0 +1,22 @@
+From 65ec26a101ec28faddbe6a7d6451857ebb32b5c7 Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Fri, 19 Dec 2025 04:35:21 -0700
+Subject: [PATCH 67/71] imx390: make modules suffix versioning same as dpkg
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/imx390.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/media/i2c/imx390.c b/drivers/media/i2c/imx390.c
+index ccd957df9..26e534d78 100644
+--- a/drivers/media/i2c/imx390.c
++++ b/drivers/media/i2c/imx390.c
+@@ -2206,3 +2206,4 @@ module_i2c_driver(imx390_i2c_driver);
+ MODULE_AUTHOR("Chang, Ying <ying.chang@intel.com>");
+ MODULE_DESCRIPTION("imx390 sensor driver");
+ MODULE_LICENSE("GPL v2");
++MODULE_VERSION(DRIVER_VERSION_SUFFIX);
+-- 
+2.25.1
+

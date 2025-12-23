@@ -1,0 +1,37 @@
+From 69668376827e808d4c74db8bfe34bf419df4e1a8 Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Mon, 19 May 2025 20:43:21 +0800
+Subject: [PATCH 42/62] acpi-pdata: add otocam22x custom HID
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/platform/intel/ipu-acpi.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/media/platform/intel/ipu-acpi.c b/drivers/media/platform/intel/ipu-acpi.c
+index b1269657a..7889173a0 100644
+--- a/drivers/media/platform/intel/ipu-acpi.c
++++ b/drivers/media/platform/intel/ipu-acpi.c
+@@ -91,6 +91,10 @@ static const struct ipu_acpi_devices supported_devices[] = {
+ #endif
+ 	{ "INTC10C5", LT6911UXE_NAME, get_sensor_pdata, NULL, 0, TYPE_DIRECT, NULL,
+ 		LT6911UXC_I2C_ADDRESS, 1200 },   // LT6911UXE HID
++        { "OTOC1031", "otocam", get_sensor_pdata, NULL, 0, TYPE_SERDES, "otocam",
++		ISX031_I2C_ADDRESS, 1600 },// OTOCAM 223 isx031 HID
++        { "OTOC1021", "otocam", get_sensor_pdata, NULL, 0, TYPE_SERDES, "otocam",
++		ISX031_I2C_ADDRESS, 1600 },// OTOCAM 222 isx021 HID
+ };
+ 
+ static int get_table_index(const char *acpi_name)
+@@ -127,6 +131,8 @@ static const struct acpi_device_id ipu_acpi_match[] = {
+ 	{ "INTC10CD", 0 },	// D457 HID
+ #endif
+ 	{ "INTC10C5", 0 },	// LT6911UXE HID
++	{ "OTOC1031", 0 },	// OTOCAM 223 isx031 HID
++	{ "OTOC1021", 0 },	// OTOCAM 222 isx021 HID
+ 	{},
+ };
+ 
+-- 
+2.25.1
+

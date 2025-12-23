@@ -1,0 +1,97 @@
+From 6f89729c8935d05526f5acc30dae6cffbb7bd088 Mon Sep 17 00:00:00 2001
+From: Florent Pirou <florent.pirou@intel.com>
+Date: Mon, 13 Jan 2025 23:34:08 +0000
+Subject: [PATCH 52/71] lt6911uxe: align linux 6.1x v4l2 uapi
+
+Signed-off-by: Florent Pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/lt6911uxe.c | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/drivers/media/i2c/lt6911uxe.c b/drivers/media/i2c/lt6911uxe.c
+index b67ab53fc..f57066c73 100644
+--- a/drivers/media/i2c/lt6911uxe.c
++++ b/drivers/media/i2c/lt6911uxe.c
+@@ -478,10 +478,18 @@ static int lt6911uxe_g_input_status(struct v4l2_subdev *sd, u32 *status)
+ }
+ 
+ static int __maybe_unused lt6911uxe_s_dv_timings(struct v4l2_subdev *sd,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
++		unsigned int pad,
++#endif
+ 		struct v4l2_dv_timings *timings)
+ {
+ 	struct lt6911uxe_state *lt6911uxe = to_state(sd);
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
++	if (pad != 0)
++		return -EINVAL;
++#endif
++
+ 	if (!v4l2_valid_dv_timings(timings, lt6911uxe_g_timings_cap(lt6911uxe),
+ 				   NULL, NULL)) {
+ 		v4l2_err(sd, "%s: timings out of range\n", __func__);
+@@ -496,20 +504,36 @@ static int __maybe_unused lt6911uxe_s_dv_timings(struct v4l2_subdev *sd,
+ }
+ 
+ static int lt6911uxe_g_dv_timings(struct v4l2_subdev *sd,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
++		unsigned int pad,
++#endif
+ 		struct v4l2_dv_timings *timings)
+ {
+ 	struct lt6911uxe_state *lt6911uxe = to_state(sd);
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
++	if (pad != 0)
++		return -EINVAL;
++#endif
++
+ 	v4l2_dbg(3, debug, sd, "%s():\n", __func__);
+ 	*timings = lt6911uxe->timings;
+ 	return 0;
+ }
+ 
+ static int __maybe_unused lt6911uxe_query_dv_timings(struct v4l2_subdev *sd,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
++		unsigned int pad,
++#endif
+ 		struct v4l2_dv_timings *timings)
+ {
+ 	struct lt6911uxe_state *lt6911uxe = to_state(sd);
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
++	if (pad != 0)
++		return -EINVAL;
++#endif
++
+ 	v4l2_dbg(3, debug, sd, "%s():\n", __func__);
+ 	if (false == lt6911uxe->streaming) {
+ 		v4l2_warn(sd, "%s: no valid signal\n", __func__);
+@@ -1145,9 +1169,11 @@ static const struct v4l2_subdev_video_ops lt6911uxe_video_ops = {
+ 	.g_frame_interval = lt6911uxe_g_frame_interval,
+ #endif
+ 	.g_input_status	= lt6911uxe_g_input_status,
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0)
+ //	.s_dv_timings	= lt6911uxe_s_dv_timings,
+ 	.g_dv_timings	= lt6911uxe_g_dv_timings,
+ //	.query_dv_timings	= lt6911uxe_query_dv_timings,
++#endif
+ 	.s_stream	= lt6911uxe_set_stream,
+ };
+ 
+@@ -1160,6 +1186,11 @@ static const struct v4l2_subdev_pad_ops lt6911uxe_pad_ops = {
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+ 	.get_frame_interval = lt6911uxe_g_frame_interval,
+ #endif
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
++//	.s_dv_timings	= lt6911uxe_s_dv_timings,
++	.g_dv_timings	= lt6911uxe_g_dv_timings,
++//	.query_dv_timings	= lt6911uxe_query_dv_timings,
++#endif
+ };
+ 
+ static struct v4l2_subdev_core_ops lt6911uxe_subdev_core_ops = {
+-- 
+2.25.1
+

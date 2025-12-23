@@ -1,0 +1,62 @@
+From 015c1ef08534b8b85e934a6dbd9a363ae667a904 Mon Sep 17 00:00:00 2001
+From: Florent Pirou <florent.pirou@intel.com>
+Date: Tue, 30 Sep 2025 12:28:10 -0700
+Subject: [PATCH 44/62] acpi-pdata: fix d3cm imx390 and ar0234 physical addr
+
+Signed-off-by: Florent Pirou <florent.pirou@intel.com>
+---
+ drivers/media/platform/intel/ipu-acpi.c | 6 ++++--
+ include/media/i2c/ar0234.h              | 1 +
+ include/media/i2c/imx390.h              | 4 +++-
+ 3 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/intel/ipu-acpi.c b/drivers/media/platform/intel/ipu-acpi.c
+index 1dcb56d1a..58dd9d295 100644
+--- a/drivers/media/platform/intel/ipu-acpi.c
++++ b/drivers/media/platform/intel/ipu-acpi.c
+@@ -76,11 +76,13 @@ static const struct ipu_acpi_devices supported_devices[] = {
+ 	{ "D3000005", "D3CMCXXX-106-084", get_sensor_pdata, NULL, 0, TYPE_SERDES, "d3-max96724",
+ 		IMX390_D3CM_I2C_ADDRESS, 1600 },       // IMX390+GMSL HID
+ 	{ "D3000006", "D3CMCXXX-089-084", get_sensor_pdata, NULL, 0, TYPE_SERDES, "d3-max96724",
+-		AR0234_I2C_ADDRESS_8BIT, 1200 },       // AR0234+GMSL HID
++		AR0234_D3CM_I2C_ADDRESS, 1200 },       // AR0234+GMSL HID
+ 	{ "INTC10C0", AR0234_NAME, get_sensor_pdata, NULL, 0, TYPE_DIRECT, NULL,
+ 		AR0234_I2C_ADDRESS_8BIT, 1200 },	// AR0234 HID
++#if IS_ENABLED(CONFIG_VIDEO_MAX9X)
+ 	{ "INTC10CR", AR0234_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, "max96724",
+-		AR0234_I2C_ADDRESS_8BIT, 1200 }, // GMSL2 MAX9295+AR0234 HID
++		AR0234_D3CM_I2C_ADDRESS, 1200 }, // GMSL2 MAX9295+AR0234 HID
++#endif
+ 	{ "INTC10B1", LT6911UXC_NAME, get_sensor_pdata, NULL, 0, TYPE_DIRECT, NULL,
+ 		LT6911UXC_I2C_ADDRESS, 1200 },	// LT6911UXC HID
+ 	{ "INTC10C1", IMX390_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, TI960_NAME,
+diff --git a/include/media/i2c/ar0234.h b/include/media/i2c/ar0234.h
+index 54cfcdc49..5c907e7f5 100644
+--- a/include/media/i2c/ar0234.h
++++ b/include/media/i2c/ar0234.h
+@@ -9,6 +9,7 @@
+ #define AR0234_NAME		"ar0234"
+ 
+ #define AR0234_I2C_ADDRESS 0x1a
++#define AR0234_D3CM_I2C_ADDRESS 0x10
+ #define AR0234_I2C_ADDRESS_8BIT (AR0234_I2C_ADDRESS << 1)
+ 
+ struct ar0234_platform_data {
+diff --git a/include/media/i2c/imx390.h b/include/media/i2c/imx390.h
+index be95249fb..c613e3519 100644
+--- a/include/media/i2c/imx390.h
++++ b/include/media/i2c/imx390.h
+@@ -8,7 +8,9 @@
+ 
+ #define IMX390_NAME "imx390"
+ 
+-#define IMX390_D3CM_I2C_ADDRESS (0x21 << 1)
++#define IMX390_I2C_ADDRESS 0x21
++#define IMX390_D3CM_I2C_ADDRESS IMX390_I2C_ADDRESS
++#define IMX390_I2C_ADDRESS_8BIT (IMX390_I2C_ADDRESS << 1)
+ 
+ struct imx390_platform_data {
+ 	unsigned int port;
+-- 
+2.25.1
+

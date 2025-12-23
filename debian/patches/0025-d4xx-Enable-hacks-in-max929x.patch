@@ -1,0 +1,29 @@
+From 90e46226d562fb21396774d67305ab61a12f435f Mon Sep 17 00:00:00 2001
+From: Josh Watts <jwatts@d3embedded.com>
+Date: Fri, 11 Oct 2024 11:50:54 -0400
+Subject: [PATCH 25/62] d4xx: Enable hacks in max929x
+
+---
+ drivers/media/i2c/d4xx.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/media/i2c/d4xx.c b/drivers/media/i2c/d4xx.c
+index 7cfbcdd8b..8f1f0364a 100644
+--- a/drivers/media/i2c/d4xx.c
++++ b/drivers/media/i2c/d4xx.c
+@@ -3230,10 +3230,12 @@ static int ds5_board_setup(struct ds5 *state)
+ 	static struct max9295_pdata max9295_pdata = {
+ 		.is_prim_ser = 1, // todo: configurable
+ 		.def_addr = 0x40, // todo: configurable
++		.d4xx_hacks = 1,
+ 	};
+ 	static struct max9296_pdata max9296_pdata = {
+ 		.max_src = 2,
+ 		.csi_mode = GMSL_CSI_2X4_MODE,
++		.d4xx_hacks = 1,
+ 	};
+ 	static struct i2c_board_info i2c_info_des = {
+ 		I2C_BOARD_INFO("max9296", 0x48),
+-- 
+2.25.1
+

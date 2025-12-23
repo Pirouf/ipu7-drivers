@@ -1,0 +1,103 @@
+From 1337de45df0c8b7b52a45df6af4210c8c8bf879a Mon Sep 17 00:00:00 2001
+From: Florent Pirou <florent.pirou@intel.com>
+Date: Tue, 18 Jun 2024 20:22:03 +0800
+Subject: [PATCH 20/62] d4xx: fix aggredated mode max9296 device removal
+
+* d4xx :  kernel NULL pointer dereference
+
+[ 1950.081452] #PF: supervisor write access in kernel mode
+[ 1950.086655] #PF: error_code(0x0002) - not-present page
+[ 1950.216966] Call Trace:
+[ 1950.219401]  <TASK>
+[ 1950.221504]  ? show_regs+0x6d/0x80
+[ 1950.224902]  ? __die+0x24/0x80
+[ 1950.227952]  ? page_fault_oops+0x99/0x1b0
+[ 1950.231948]  ? do_user_addr_fault+0x31d/0x6b0
+[ 1950.236283]  ? exc_page_fault+0x83/0x1b0
+[ 1950.240190]  ? asm_exc_page_fault+0x27/0x30
+[ 1950.244358]  ? mutex_lock+0x1d/0x50
+[ 1950.247827]  ? mutex_lock+0x12/0x50
+[ 1950.251301]  max9296_reset_control+0x26/0xf0 [max9296]
+[ 1950.256425]  ds5_remove+0xba/0x2e0 [d4xx]
+[ 1950.260423]  i2c_device_remove+0x25/0xc0
+[ 1950.264338]  device_remove+0x40/0x80
+[ 1950.267899]  device_release_driver_internal+0x20b/0x270
+[ 1950.273096]  driver_detach+0x4a/0xa0
+[ 1950.276655]  bus_remove_driver+0x83/0x110
+[ 1950.280641]  driver_unregister+0x2f/0x60
+[ 1950.284542]  i2c_del_driver+0x46/0x90
+[ 1950.288191]  ds5_i2c_driver_exit+0x10/0x18 [d4xx]
+
+Signed-off-by: Florent Pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/d4xx.c | 36 +++++++++++++++++++++++-------------
+ 1 file changed, 23 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/media/i2c/d4xx.c b/drivers/media/i2c/d4xx.c
+index 7a1c06ab4..d5bc3097a 100644
+--- a/drivers/media/i2c/d4xx.c
++++ b/drivers/media/i2c/d4xx.c
+@@ -5846,6 +5846,7 @@ static void ds5_remove(struct i2c_client *c)
+ 
+ #ifdef CONFIG_VIDEO_D4XX_SERDES
+ 	int i, ret;
++	int c_bus = c->adapter->nr;
+ 	for (i = 0; i < MAX_DEV_NUM; i++) {
+ 		if (serdes_inited[i] && serdes_inited[i] == state) {
+ 			serdes_inited[i] = NULL;
+@@ -5855,22 +5856,31 @@ static void ds5_remove(struct i2c_client *c)
+ 			if (ret)
+ 				dev_warn(&c->dev,
+ 				  "failed in 9295 reset control\n");
+-			ret = max9296_reset_control(state->dser_dev,
+-				state->g_ctx.s_dev);
+-			if (ret)
+-				dev_warn(&c->dev,
+-				  "failed in 9296 reset control\n");
+-
++			if (state->dser_i2c) {
++				dev_info(&c->dev, "ignore 9296 reset control, already remove for bus %d\n", c_bus);
++			} else {
++				ret = max9296_reset_control(state->dser_dev,
++							    state->g_ctx.s_dev);
++				if (ret)
++				  dev_warn(&c->dev,
++					   "failed in 9296 reset control\n");
++			}
+ 			ret = max9295_sdev_unpair(state->ser_dev,
+ 				state->g_ctx.s_dev);
+ 			if (ret)
+ 				dev_warn(&c->dev, "failed to unpair sdev\n");
+-			ret = max9296_sdev_unregister(state->dser_dev,
+-				state->g_ctx.s_dev);
+-			if (ret)
+-				dev_warn(&c->dev,
+-				  "failed to sdev unregister sdev\n");
+-			max9296_power_off(state->dser_dev);
++
++			if (state->dser_i2c) {
++				dev_info(&c->dev, "ignore 9296 unregister sdev, already remove for bus %d\n", c_bus);
++			} else {
++				ret = max9296_sdev_unregister(state->dser_dev,
++							      state->g_ctx.s_dev);
++				if (ret)
++				  dev_warn(&c->dev,
++					   "failed to sdev unregister sdev\n");
++
++				max9296_power_off(state->dser_dev);
++			}
+ 
+ 			mutex_unlock(&serdes_lock__);
+ 			break;
+@@ -5878,7 +5888,7 @@ static void ds5_remove(struct i2c_client *c)
+ 	}
+ 	if (state->ser_i2c)
+ 		i2c_unregister_device(state->ser_i2c);
+-	if (state->dser_i2c)
++	if (state->dser_i2c && !state->aggregated)
+ 		i2c_unregister_device(state->dser_i2c);
+ #endif
+ #ifndef CONFIG_TEGRA_CAMERA_PLATFORM
+-- 
+2.25.1
+

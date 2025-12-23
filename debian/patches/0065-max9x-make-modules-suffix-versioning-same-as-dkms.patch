@@ -1,0 +1,22 @@
+From f6c65c00ff527de79a59b4e6d797326587c51837 Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Fri, 19 Dec 2025 04:34:16 -0700
+Subject: [PATCH 65/71] max9x: make modules suffix versioning same as dkms
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/max9x/serdes.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/media/i2c/max9x/serdes.c b/drivers/media/i2c/max9x/serdes.c
+index 8c0635d73..ce47c547f 100644
+--- a/drivers/media/i2c/max9x/serdes.c
++++ b/drivers/media/i2c/max9x/serdes.c
+@@ -2797,3 +2797,4 @@ MODULE_LICENSE("GPL v2");
+ MODULE_AUTHOR("Josh Watts <jwatts@d3embedded.com>");
+ MODULE_AUTHOR("Yan, Dongcheng <dongcheng.yan@intel.com>");
+ MODULE_DESCRIPTION("Common logic for Maxim GMSL serializers & deserializers");
++MODULE_VERSION(DRIVER_VERSION_SUFFIX);
+-- 
+2.25.1
+

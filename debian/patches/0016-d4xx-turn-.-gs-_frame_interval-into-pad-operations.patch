@@ -1,0 +1,187 @@
+From 530ca39103edc5aaf74091d02355aa2571602705 Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Thu, 16 May 2024 06:03:35 -0700
+Subject: [PATCH 16/62] d4xx : turn .[gs]_frame_interval into pad operations
+
+ref-by: https://patches.linaro.org/project/linux-media/patch/20231213140450.21359-3-laurent.pinchart@ideasonboard.com/
+
+The subdev .[gs]_frame_interval are video operations, but they operate
+on pads (and even on streams). Not only is this confusing, it causes
+practical issues for drivers as the operations don't receive a subdev
+state pointer, requiring manual state handling.
+
+To improve the situation, turn the operations into pad operations, and
+extend them to receive a state pointer like other pad operations.
+
+While at it, rename the operations to .[gs]et_frame_interval at the same
+time to match the naming scheme of other pad operations. This isn't
+strictly necessary, but given that all drivers using those operations
+need to be modified, handling the rename separately would generate more
+churn for very little gain (if at all).
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/d4xx.c | 73 +++++++++++++++++++++++-----------------
+ 1 file changed, 42 insertions(+), 31 deletions(-)
+
+diff --git a/drivers/media/i2c/d4xx.c b/drivers/media/i2c/d4xx.c
+index 2d0ab292d..aaa15e38f 100644
+--- a/drivers/media/i2c/d4xx.c
++++ b/drivers/media/i2c/d4xx.c
+@@ -1647,19 +1647,13 @@ static int ds5_configure(struct ds5 *state)
+ 	return 0;
+ }
+ 
+-static const struct v4l2_subdev_pad_ops ds5_depth_pad_ops = {
+-	.enum_mbus_code		= ds5_sensor_enum_mbus_code,
+-	.enum_frame_size	= ds5_sensor_enum_frame_size,
+-	.enum_frame_interval	= ds5_sensor_enum_frame_interval,
+-	.get_fmt		= ds5_sensor_get_fmt,
+-	.set_fmt		= ds5_sensor_set_fmt,
+-};
+-
+ static int ds5_sensor_g_frame_interval(struct v4l2_subdev *sd,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++/* pad ops */
++		struct v4l2_subdev_state *sd_state,
+ 		struct v4l2_subdev_frame_interval *fi)
+ #else
+-		struct v4l2_subdev_state *sd_state,
++/* Video ops */
+ 		struct v4l2_subdev_frame_interval *fi)
+ #endif
+ {
+@@ -1679,10 +1673,12 @@ static int ds5_sensor_g_frame_interval(struct v4l2_subdev *sd,
+ static u16 __ds5_probe_framerate(const struct ds5_resolution *res, u16 target);
+ 
+ static int ds5_sensor_s_frame_interval(struct v4l2_subdev *sd,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++/* pad ops */
++		struct v4l2_subdev_state *sd_state,
+ 		struct v4l2_subdev_frame_interval *fi)
+ #else
+-		struct v4l2_subdev_state *sd_state,
++/* Video ops */
+ 		struct v4l2_subdev_frame_interval *fi)
+ #endif
+ {
+@@ -1715,8 +1711,20 @@ static int ds5_sensor_s_stream(struct v4l2_subdev *sd, int on)
+ 	return 0;
+ }
+ 
++static const struct v4l2_subdev_pad_ops ds5_depth_pad_ops = {
++	.enum_mbus_code		= ds5_sensor_enum_mbus_code,
++	.enum_frame_size	= ds5_sensor_enum_frame_size,
++	.enum_frame_interval	= ds5_sensor_enum_frame_interval,
++	.get_fmt		= ds5_sensor_get_fmt,
++	.set_fmt		= ds5_sensor_set_fmt,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++	.get_frame_interval	= ds5_sensor_g_frame_interval,
++	.set_frame_interval	= ds5_sensor_s_frame_interval,
++#endif
++};
++
+ static const struct v4l2_subdev_video_ops ds5_sensor_video_ops = {
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
+ 	.g_frame_interval	= ds5_sensor_g_frame_interval,
+ 	.s_frame_interval	= ds5_sensor_s_frame_interval,
+ #endif
+@@ -1737,9 +1745,9 @@ static const struct v4l2_subdev_pad_ops ds5_ir_pad_ops = {
+ 	.enum_frame_interval	= ds5_sensor_enum_frame_interval,
+ 	.get_fmt		= ds5_sensor_get_fmt,
+ 	.set_fmt		= ds5_sensor_set_fmt,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
+-	.get_frame_interval       = ds5_sensor_g_frame_interval,
+-	.set_frame_interval       = ds5_sensor_s_frame_interval,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++	.get_frame_interval	= ds5_sensor_g_frame_interval,
++	.set_frame_interval	= ds5_sensor_s_frame_interval,
+ #endif
+ };
+ 
+@@ -1755,9 +1763,9 @@ static const struct v4l2_subdev_pad_ops ds5_rgb_pad_ops = {
+ 	.enum_frame_interval	= ds5_sensor_enum_frame_interval,
+ 	.get_fmt		= ds5_sensor_get_fmt,
+ 	.set_fmt		= ds5_sensor_set_fmt,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
+-	.get_frame_interval       = ds5_sensor_g_frame_interval,
+-	.set_frame_interval       = ds5_sensor_s_frame_interval,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++	.get_frame_interval	= ds5_sensor_g_frame_interval,
++	.set_frame_interval	= ds5_sensor_s_frame_interval,
+ #endif
+ };
+ 
+@@ -1772,9 +1780,9 @@ static const struct v4l2_subdev_pad_ops ds5_imu_pad_ops = {
+ 	.enum_frame_interval	= ds5_sensor_enum_frame_interval,
+ 	.get_fmt		= ds5_sensor_get_fmt,
+ 	.set_fmt		= ds5_sensor_set_fmt,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
+-	.get_frame_interval       = ds5_sensor_g_frame_interval,
+-	.set_frame_interval       = ds5_sensor_s_frame_interval,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++	.get_frame_interval	= ds5_sensor_g_frame_interval,
++	.set_frame_interval	= ds5_sensor_s_frame_interval,
+ #endif
+ };
+ 
+@@ -4102,12 +4110,13 @@ static int ds5_mux_get_fmt(struct v4l2_subdev *sd,
+ 	return ret;
+ }
+ 
+-/* Video ops */
+ static int ds5_mux_g_frame_interval(struct v4l2_subdev *sd,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++/* pad ops */
++		struct v4l2_subdev_state *sd_state,
+ 		struct v4l2_subdev_frame_interval *fi)
+ #else
+-		struct v4l2_subdev_state *sd_state,
++/* Video ops */
+ 		struct v4l2_subdev_frame_interval *fi)
+ #endif
+ {
+@@ -4143,10 +4152,12 @@ static u16 __ds5_probe_framerate(const struct ds5_resolution *res, u16 target)
+ }
+ 
+ static int ds5_mux_s_frame_interval(struct v4l2_subdev *sd,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++/* pad ops */
++		struct v4l2_subdev_state *sd_state,
+ 		struct v4l2_subdev_frame_interval *fi)
+ #else
+-		struct v4l2_subdev_state *sd_state,
++/* Video ops */
+ 		struct v4l2_subdev_frame_interval *fi)
+ #endif
+ {
+@@ -4404,9 +4415,9 @@ static const struct v4l2_subdev_pad_ops ds5_mux_pad_ops = {
+ 	.get_fmt		= ds5_mux_get_fmt,
+ 	.set_fmt		= ds5_mux_set_fmt,
+ 	.get_frame_desc		= ds5_mux_get_frame_desc,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
+-	.get_frame_interval     = ds5_mux_g_frame_interval,
+-	.set_frame_interval     = ds5_mux_s_frame_interval,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++	.get_frame_interval	= ds5_mux_g_frame_interval,
++	.set_frame_interval	= ds5_mux_s_frame_interval,
+ #endif
+ };
+ 
+@@ -4416,7 +4427,7 @@ static const struct v4l2_subdev_core_ops ds5_mux_core_ops = {
+ };
+ 
+ static const struct v4l2_subdev_video_ops ds5_mux_video_ops = {
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
+ 	.g_frame_interval	= ds5_mux_g_frame_interval,
+ 	.s_frame_interval	= ds5_mux_s_frame_interval,
+ #endif
+-- 
+2.25.1
+

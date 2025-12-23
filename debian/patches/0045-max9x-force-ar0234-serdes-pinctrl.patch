@@ -1,0 +1,37 @@
+From 16ffdb01b50a9ca220ce69bcce2b30953dbe5580 Mon Sep 17 00:00:00 2001
+From: Florent Pirou <florent.pirou@intel.com>
+Date: Mon, 29 Sep 2025 11:36:19 -0700
+Subject: [PATCH 45/62] max9x: force ar0234 serdes pinctrl
+
+Signed-off-by: Florent Pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/max9x/serdes.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/media/i2c/max9x/serdes.c b/drivers/media/i2c/max9x/serdes.c
+index 0f821c947..9d4de8e5c 100644
+--- a/drivers/media/i2c/max9x/serdes.c
++++ b/drivers/media/i2c/max9x/serdes.c
+@@ -1808,6 +1808,19 @@ static int max9x_registered(struct v4l2_subdev *sd)
+ 					sensor_gpios.dev_id = dev_id;
+ 					sensor_gpios.table[0].key = common->gpio_chip.label;
+ 
++					// HACK: Just make ar0234 work
++					if (!strcmp(subdev_pdata->board_info.type, "ar0234")) {
++						// set GPIOB push-pull and select pull-down
++						dev_dbg(dev, "serializer GPIO0 pull-down %s sensor RESET_BAR signal toggled (%s)...", subdev_pdata->board_info.type, dev_id);
++						regmap_write(common->map, 0x2BF, 0xa0 );
++						regmap_write(common->map, 0x2BE, 0);
++						usleep_range(10000, 10000);
++						regmap_write(common->map, 0x2BF, 0xa0 );
++						regmap_write(common->map, 0x2BE, 1 << 4);
++						//Needs to sleep for quite a while before register writes
++						usleep_range(200 * 1000, 200 * 1000 + 500);
++					}
++
+ 					gpiod_add_lookup_table(&sensor_gpios);
+ 
+ 					struct v4l2_subdev *subdev =
+-- 
+2.25.1
+

@@ -1,0 +1,57 @@
+From 79c7d43fc5b618bb2530675b0a0336a939601fbd Mon Sep 17 00:00:00 2001
+From: Josh Watts <jwatts@d3embedded.com>
+Date: Fri, 11 Oct 2024 11:48:32 -0400
+Subject: [PATCH 33/62] max9295: Expose MFP IO
+
+---
+ drivers/media/i2c/max9295.c | 22 ++++++++++++++++++++++
+ include/media/max9295.h     |  2 ++
+ 2 files changed, 24 insertions(+)
+
+diff --git a/drivers/media/i2c/max9295.c b/drivers/media/i2c/max9295.c
+index 9d6a9d99b..102a26559 100644
+--- a/drivers/media/i2c/max9295.c
++++ b/drivers/media/i2c/max9295.c
+@@ -699,6 +699,28 @@ int max9295_init_settings(struct device *dev)
+ }
+ EXPORT_SYMBOL(max9295_init_settings);
+ 
++int max9295_set_mfp(struct device *dev, int pin, int val)
++{
++	struct max9295 *priv = dev_get_drvdata(dev);
++	struct regmap *map = priv->regmap;
++	int err;
++
++	if (pin > 10)
++		return -EINVAL;
++
++	err = regmap_update_bits(map, 0x2BE + (pin * 3),
++		(1<<4 | 1<<2 | 1<<0),
++		((val ? 1<<4 : 0) | 0<<2 | 0<<0) );
++
++	err |= regmap_update_bits(map, 0x2BF + (pin * 3),
++		3<<6|1<<5,
++		1<<6|1<<5);
++
++	return err;
++
++}
++EXPORT_SYMBOL(max9295_set_mfp);
++
+ int max9295_set_pipe(struct device *dev, int pipe_id,
+ 		     u8 data_type1, u8 data_type2, u32 vc_id)
+ {
+diff --git a/include/media/max9295.h b/include/media/max9295.h
+index ff91d3cff..71c2106a6 100644
+--- a/include/media/max9295.h
++++ b/include/media/max9295.h
+@@ -109,4 +109,6 @@ int max9295_setup_streaming(struct device *dev);
+ int max9295_init_settings(struct device *dev);
+ /** @} */
+ 
++int max9295_set_mfp(struct device *dev, int pin, int val);
++
+ #endif  /* __MAX9295_H__ */
+-- 
+2.25.1
+

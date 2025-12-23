@@ -1,0 +1,183 @@
+From a6dd8108ed26e437d813991a8a4533e6c43cb879 Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Thu, 16 May 2024 06:03:35 -0700
+Subject: [PATCH 46/62] media, i2c: turn .[gs]_frame_interval into pad
+ operations
+
+ref-by: https://patches.linaro.org/project/linux-media/patch/20231213140450.21359-3-laurent.pinchart@ideasonboard.com/
+
+The subdev .[gs]_frame_interval are video operations, but they operate
+on pads (and even on streams). Not only is this confusing, it causes
+practical issues for drivers as the operations don't receive a subdev
+state pointer, requiring manual state handling.
+
+To improve the situation, turn the operations into pad operations, and
+extend them to receive a state pointer like other pad operations.
+
+While at it, rename the operations to .[gs]et_frame_interval at the same
+time to match the naming scheme of other pad operations. This isn't
+strictly necessary, but given that all drivers using those operations
+need to be modified, handling the rename separately would generate more
+churn for very little gain (if at all).
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/ar0234.c    | 10 ++++++----
+ drivers/media/i2c/imx390.c    | 10 ++++++----
+ drivers/media/i2c/lt6911uxc.c | 12 +++++++-----
+ drivers/media/i2c/lt6911uxe.c | 10 ++++++----
+ 4 files changed, 25 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/media/i2c/ar0234.c b/drivers/media/i2c/ar0234.c
+index 23870dc0f..617e6c5f5 100644
+--- a/drivers/media/i2c/ar0234.c
++++ b/drivers/media/i2c/ar0234.c
+@@ -1882,10 +1882,12 @@ static int ar0234_set_stream(struct v4l2_subdev *sd, int enable)
+ }
+ 
+ static int ar0234_g_frame_interval(struct v4l2_subdev *sd,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++/* pad ops */
++		struct v4l2_subdev_state *sd_state,
+ 		struct v4l2_subdev_frame_interval *fival)
+ #else
+-		struct v4l2_subdev_state *sd_state,
++/* Video ops */
+ 		struct v4l2_subdev_frame_interval *fival)
+ #endif
+ {
+@@ -2128,7 +2130,7 @@ static int ar0234_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+ 
+ static const struct v4l2_subdev_video_ops ar0234_video_ops = {
+ 	.s_stream = ar0234_set_stream,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
+ 	.g_frame_interval = ar0234_g_frame_interval,
+ #endif
+ };
+@@ -2139,7 +2141,7 @@ static const struct v4l2_subdev_pad_ops ar0234_pad_ops = {
+ 	.enum_mbus_code = ar0234_enum_mbus_code,
+ 	.enum_frame_size = ar0234_enum_frame_size,
+ 	.enum_frame_interval = ar0234_enum_frame_interval,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+ 	.get_frame_interval = ar0234_g_frame_interval,
+ #endif
+ };
+diff --git a/drivers/media/i2c/imx390.c b/drivers/media/i2c/imx390.c
+index 60c1f3061..0b482159e 100644
+--- a/drivers/media/i2c/imx390.c
++++ b/drivers/media/i2c/imx390.c
+@@ -1651,10 +1651,12 @@ static int imx390_set_stream(struct v4l2_subdev *sd, int enable)
+ }
+ 
+ static int imx390_g_frame_interval(struct v4l2_subdev *sd,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++/* pad ops */
++		struct v4l2_subdev_state *sd_state,
+ 		struct v4l2_subdev_frame_interval *fival)
+ #else
+-		struct v4l2_subdev_state *sd_state,
++/* Video ops */
+ 		struct v4l2_subdev_frame_interval *fival)
+ #endif
+ {
+@@ -1917,7 +1919,7 @@ static int imx390_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+ 
+ static const struct v4l2_subdev_video_ops imx390_video_ops = {
+ 	.s_stream = imx390_set_stream,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
+ 	.g_frame_interval = imx390_g_frame_interval,
+ #endif
+ };
+@@ -1929,7 +1931,7 @@ static const struct v4l2_subdev_pad_ops imx390_pad_ops = {
+ 	.enum_mbus_code = imx390_enum_mbus_code,
+ 	.enum_frame_size = imx390_enum_frame_size,
+ 	.enum_frame_interval = imx390_enum_frame_interval,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+ 	.get_frame_interval = imx390_g_frame_interval,
+ #endif
+ };
+diff --git a/drivers/media/i2c/lt6911uxc.c b/drivers/media/i2c/lt6911uxc.c
+index 66d8f5831..89ef316ca 100644
+--- a/drivers/media/i2c/lt6911uxc.c
++++ b/drivers/media/i2c/lt6911uxc.c
+@@ -952,11 +952,13 @@ static int lt6911uxc_set_stream(struct v4l2_subdev *sd, int enable)
+ }
+ 
+ static int lt6911uxc_g_frame_interval(struct v4l2_subdev *sd,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++/* pad ops */
++		struct v4l2_subdev_state *sd_state,
+ 		struct v4l2_subdev_frame_interval *fival)
+ #else
+-		struct v4l2_subdev_state *sd_state,
+-		 struct v4l2_subdev_frame_interval *fival)
++/* Video ops */
++		struct v4l2_subdev_frame_interval *fival)
+ #endif
+ {
+ 	struct lt6911uxc_state *lt6911uxc = to_state(sd);
+@@ -1126,7 +1128,7 @@ static const struct v4l2_subdev_internal_ops lt6911uxc_subdev_internal_ops = {
+ 
+ static const struct v4l2_subdev_video_ops lt6911uxc_video_ops = {
+ 	.s_stream = lt6911uxc_set_stream,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
+ 	.g_frame_interval = lt6911uxc_g_frame_interval,
+ #endif
+ 	.g_input_status	= lt6911uxc_g_input_status,
+@@ -1142,7 +1144,7 @@ static const struct v4l2_subdev_pad_ops lt6911uxc_pad_ops = {
+ 	.enum_mbus_code = lt6911uxc_enum_mbus_code,
+ 	.enum_frame_size = lt6911uxc_enum_frame_size,
+ 	.enum_frame_interval = lt6911uxc_enum_frame_interval,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+ 	.get_frame_interval = lt6911uxc_g_frame_interval,
+ #endif
+ };
+diff --git a/drivers/media/i2c/lt6911uxe.c b/drivers/media/i2c/lt6911uxe.c
+index 2e31b6593..b67ab53fc 100644
+--- a/drivers/media/i2c/lt6911uxe.c
++++ b/drivers/media/i2c/lt6911uxe.c
+@@ -964,10 +964,12 @@ static int lt6911uxe_set_stream(struct v4l2_subdev *sd, int enable)
+ }
+ 
+ static int lt6911uxe_g_frame_interval(struct v4l2_subdev *sd,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++/* pad ops */
++		struct v4l2_subdev_state *sd_state,
+ 		struct v4l2_subdev_frame_interval *fival)
+ #else
+-		struct v4l2_subdev_state *sd_state,
++/* Video ops */
+ 		struct v4l2_subdev_frame_interval *fival)
+ #endif
+ {
+@@ -1139,7 +1141,7 @@ static const struct v4l2_subdev_internal_ops lt6911uxe_subdev_internal_ops = {
+ 
+ static const struct v4l2_subdev_video_ops lt6911uxe_video_ops = {
+ 	.s_stream = lt6911uxe_set_stream,
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
+ 	.g_frame_interval = lt6911uxe_g_frame_interval,
+ #endif
+ 	.g_input_status	= lt6911uxe_g_input_status,
+@@ -1155,7 +1157,7 @@ static const struct v4l2_subdev_pad_ops lt6911uxe_pad_ops = {
+ 	.enum_mbus_code = lt6911uxe_enum_mbus_code,
+ 	.enum_frame_size = lt6911uxe_enum_frame_size,
+ 	.enum_frame_interval = lt6911uxe_enum_frame_interval,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+ 	.get_frame_interval = lt6911uxe_g_frame_interval,
+ #endif
+ };
+-- 
+2.25.1
+

@@ -1,0 +1,56 @@
+From 6091b713f0973d814ea40b9594f401efb5543a17 Mon Sep 17 00:00:00 2001
+From: Dmitry Perchanov <dmitry.perchanov@intel.com>
+Date: Thu, 21 Mar 2024 11:17:32 +0200
+Subject: [PATCH 13/62] d4xx: add kernel 6.5 support
+
+* d4xx: kernel6 #3 https://github.com/dmipx/ipu6-drivers/commit/15ddce4723625c26f1483fa2e523c2112ceaa63d
+* d4xx: kernel6 #2 https://github.com/dmipx/ipu6-drivers/commit/e113eca9460971353a7836b9041086642efe96fa
+* d4xx: kernel6 https://github.com/dmipx/ipu6-drivers/commit/772625227520ac8537edc8386ac4648084e88a3e
+
+Signed-off-by: Dmitry Perchanov <dmitry.perchanov@intel.com>
+---
+ drivers/media/i2c/d4xx.c | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/i2c/d4xx.c b/drivers/media/i2c/d4xx.c
+index 2088efe2d..06ce1b1ab 100644
+--- a/drivers/media/i2c/d4xx.c
++++ b/drivers/media/i2c/d4xx.c
+@@ -5220,7 +5220,7 @@ static int ds5_chrdev_init(struct i2c_client *c, struct ds5 *state)
+ 		dev_dbg(&c->dev, "%s(): <Major, Minor>: <%d, %d>\n",
+ 				__func__, MAJOR(*dev_num), MINOR(*dev_num));
+ 		/* Create a class : appears at /sys/class */
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+ 		*ds5_class = class_create(THIS_MODULE, DS5_DRIVER_NAME_CLASS);
+ #else
+ 		*ds5_class = class_create(DS5_DRIVER_NAME_CLASS);
+@@ -5590,7 +5590,12 @@ static int ds5_i2c_addr_setting(struct i2c_client *c, struct ds5 *state)
+ }
+ #endif
+ #endif //CONFIG_VIDEO_INTEL_IPU6
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+ static int ds5_probe(struct i2c_client *c, const struct i2c_device_id *id)
++#else
++static int ds5_probe(struct i2c_client *c)
++#endif
+ {
+ 	struct ds5 *state = devm_kzalloc(&c->dev, sizeof(*state), GFP_KERNEL);
+ 	u16 rec_state;
+@@ -5605,8 +5610,11 @@ static int ds5_probe(struct i2c_client *c, const struct i2c_device_id *id)
+ 
+ 	state->client = c;
+ 	dev_warn(&c->dev, "Probing driver for D45x\n");
+-
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+ 	state->variant = ds5_variants + id->driver_data;
++#else
++	state->variant = ds5_variants;
++#endif
+ #ifdef CONFIG_OF
+ 	state->vcc = devm_regulator_get(&c->dev, "vcc");
+ 	if (IS_ERR(state->vcc)) {
+-- 
+2.25.1
+

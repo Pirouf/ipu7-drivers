@@ -1,0 +1,22 @@
+From 41baab21e234e164e13f9898e78c6b7970469e24 Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Fri, 19 Dec 2025 04:35:05 -0700
+Subject: [PATCH 66/71] isx031: make modules suffix versioning same as dkms
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/isx031.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/media/i2c/isx031.c b/drivers/media/i2c/isx031.c
+index eb7113046..01e69be75 100644
+--- a/drivers/media/i2c/isx031.c
++++ b/drivers/media/i2c/isx031.c
+@@ -940,3 +940,4 @@ module_i2c_driver(isx031_i2c_driver);
+ MODULE_AUTHOR("Hao Yao <hao.yao@intel.com>");
+ MODULE_DESCRIPTION("isx031 sensor driver");
+ MODULE_LICENSE("GPL v2");
++MODULE_VERSION(DRIVER_VERSION_SUFFIX);
+-- 
+2.25.1
+

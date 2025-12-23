@@ -1,0 +1,101 @@
+From f1985e2c74677fe292f3bb9992850bc2af6e0311 Mon Sep 17 00:00:00 2001
+From: Florent Pirou <florent.pirou@intel.com>
+Date: Tue, 11 Feb 2025 11:53:36 -0700
+Subject: [PATCH 35/62] max9296 : setup control fallback for serializer invalid
+ source
+
+* deserializer link setup graceful fallback when no csi-link aggregation is possible (e.g. serializer not responding)
+
+```
+[   75.854983] d4xx 2-0012: configure GMSL port B
+[   76.092278] max9295 2-0064: max9295_setup_control: update address reassignment 0x40->0x64
+[   76.100995] max9295 2-0064: max9295_write_reg:i2c write failed, 0x0 = c8
+[   76.108082] max9295 2-0064: max9295_write_reg:i2c write failed, 0x10 = 22
+[   76.115152] max9295 2-0064: max9295_setup_control: ERROR: ser device not found
+[   76.122556] d4xx 2-0012: gmsl serializer invalid source
+[   76.127955] max9296 2-0048: max9296_setup_control: set SerDes GMSL A & B dual-link)
+[   76.244858] max9296 2-0048: max9296_setup_control:  checking serializer sources (count/ref=1/2 -> src[1]=GMSL B)
+[   76.255190] max9296 2-0048: max9296_setup_control: restore SerDes GMSL A single-link
+[   76.372275] d4xx 2-0012: gmsl serdes setup gracefully fallback
+[   76.378294] d4xx 2-0012: max9295 communication failed : -524
+[   76.384156] max9295 2-0064: [MAX9295]: remove GMSL Serializer
+[   76.390186] d4xx: probe of 2-0012 failed with error -524
+[   76.395939] intel-ipu6-isys intel-ipu6-isys0: can't create new i2c subdev
+```
+
+Signed-off-by: Florent Pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/max9296.c | 32 +++++++++++++++++++++++++++++++-
+ 1 file changed, 31 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/max9296.c b/drivers/media/i2c/max9296.c
+index 4996ff17b..0405a5eec 100644
+--- a/drivers/media/i2c/max9296.c
++++ b/drivers/media/i2c/max9296.c
+@@ -2,6 +2,7 @@
+  * max9296.c - max9296 GMSL Deserializer driver
+  *
+  * Copyright (c) 2018-2022, NVIDIA CORPORATION.  All rights reserved.
++ * Copyright (c) 2024-2025, INTEL CORPORATION.  All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms and conditions of the GNU General Public License,
+@@ -358,6 +359,8 @@ int max9296_setup_control(struct device *dev, struct device *s_dev)
+ 	if ((priv->max_src > 1U) &&
+ 		(priv->num_src_found > 0U) &&
+ 		(priv->splitter_enabled == false)) {
++		dev_info(dev, "%s: set SerDes GMSL A & B dual-link)\n",
++			 __func__);
+ 		max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x03);
+ 		max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x23);
+ 
+@@ -372,18 +375,45 @@ int max9296_setup_control(struct device *dev, struct device *s_dev)
+ 
+ 	priv->sdev_ref++;
+ 
++	dev_info(dev, "%s:  checking serializer sources (count/ref=%d/%d -> src[%d]=%s)\n",
++		 __func__,
++		 priv->num_src_found,
++		 priv->sdev_ref, i,
++		 priv->sources[i].g_ctx->serdes_csi_link == GMSL_SERDES_CSI_LINK_A? "GMSL A": "GMSL B");
++
+ 	/* Reset splitter mode if all devices are not found */
+ 	if ((priv->sdev_ref != priv->max_src) &&
+ 		(priv->splitter_enabled == true) &&
+ 		(priv->num_src_found > 0U) &&
+ 		(priv->num_src_found < priv->max_src)) {
++		dev_info(dev, "%s: restore SerDes %s single-link\n",
++			 __func__,
++			 priv->src_link == GMSL_SERDES_CSI_LINK_A? "GMSL A": "GMSL B");
+ 		err = max9296_write_link(dev, priv->src_link);
+-		if (err)
++		if (err) {
++			dev_info(dev, "%s: fail to write source link\n",
++				 __func__);
+ 			goto error;
++		}
+ 
+ 		priv->splitter_enabled = false;
++
++	} else if (priv->num_src_found < priv->sdev_ref) {
++
++		dev_info(dev, "%s: restore SerDes %s single-link\n",
++			 __func__,
++			 priv->src_link == GMSL_SERDES_CSI_LINK_A ? "GMSL A": "GMSL B");
++
++		err = max9296_write_link(dev, priv->src_link);
++		if (err) {
++			dev_info(dev, "%s: fail to write source link\n",
++				 __func__);
++			goto error;
++		}
++		priv->splitter_enabled = false;
+ 	}
+ 
++
+ error:
+ 	mutex_unlock(&priv->lock);
+ 	return err;
+-- 
+2.25.1
+

@@ -1,0 +1,66 @@
+From fc9d99b3f374ef32af170cc9a90537d2e6630056 Mon Sep 17 00:00:00 2001
+From: Josh Watts <jwatts@d3embedded.com>
+Date: Thu, 5 Jun 2025 10:57:05 -0700
+Subject: [PATCH 43/62] acpi-pdata: Add D3CM ISX031 IMX390 and AR0234
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ Makefile                                | 1 +
+ drivers/media/i2c/Makefile              | 1 +
+ drivers/media/platform/intel/ipu-acpi.c | 9 +++++++++
+ 3 files changed, 11 insertions(+)
+
+diff --git a/Makefile b/Makefile
+index 1cd754e2a..1d2ae024d 100644
+--- a/Makefile
++++ b/Makefile
+@@ -19,6 +19,7 @@ subdir-ccflags-y += -I$(src)/include
+ 
+ export CONFIG_VIDEO_AR0234=m
+ export CONFIG_VIDEO_ISX031=m
++export CONFIG_VIDEO_IMX390=m
+ export CONFIG_VIDEO_MAX9X=m
+ export CONFIG_VIDEO_D4XX_MAX9295 = m
+ export CONFIG_VIDEO_D4XX_MAX9296 = m
+diff --git a/drivers/media/i2c/Makefile b/drivers/media/i2c/Makefile
+index 08192712f..241c6e0f8 100644
+--- a/drivers/media/i2c/Makefile
++++ b/drivers/media/i2c/Makefile
+@@ -24,6 +24,7 @@ obj-$(CONFIG_VIDEO_AR0234) += ar0234.o
+ obj-$(CONFIG_VIDEO_LT6911UXC) += lt6911uxc.o
+ obj-$(CONFIG_VIDEO_LT6911UXE) += lt6911uxe.o
+ obj-$(CONFIG_VIDEO_ISX031) += isx031.o
++obj-$(CONFIG_VIDEO_AR0234) += imx390.o
+ obj-$(CONFIG_VIDEO_MAX9X) += max9x/
+ obj-$(CONFIG_VIDEO_D4XX_MAX9295) += d4xx-max9295.o
+ obj-$(CONFIG_VIDEO_D4XX_MAX9296) += d4xx-max9296.o
+diff --git a/drivers/media/platform/intel/ipu-acpi.c b/drivers/media/platform/intel/ipu-acpi.c
+index 7889173a0..1dcb56d1a 100644
+--- a/drivers/media/platform/intel/ipu-acpi.c
++++ b/drivers/media/platform/intel/ipu-acpi.c
+@@ -71,6 +71,12 @@ static const struct ipu_acpi_devices supported_devices[] = {
+  *		sensor_physical_addr, link_freq(mbps) },	// Custom HID
+  */
+ 
++	{ "D3000004", "D3CMCXXX-115-084", get_sensor_pdata, NULL, 0, TYPE_SERDES, "d3-max96724",
++		ISX031_I2C_ADDRESS, 1600 },       // ISX031+GMSL HID
++	{ "D3000005", "D3CMCXXX-106-084", get_sensor_pdata, NULL, 0, TYPE_SERDES, "d3-max96724",
++		IMX390_D3CM_I2C_ADDRESS, 1600 },       // IMX390+GMSL HID
++	{ "D3000006", "D3CMCXXX-089-084", get_sensor_pdata, NULL, 0, TYPE_SERDES, "d3-max96724",
++		AR0234_I2C_ADDRESS_8BIT, 1200 },       // AR0234+GMSL HID
+ 	{ "INTC10C0", AR0234_NAME, get_sensor_pdata, NULL, 0, TYPE_DIRECT, NULL,
+ 		AR0234_I2C_ADDRESS_8BIT, 1200 },	// AR0234 HID
+ 	{ "INTC10CR", AR0234_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, "max96724",
+@@ -116,6 +122,9 @@ static const struct acpi_device_id ipu_acpi_match[] = {
+ /*
+  *	{ "AR0234A", 0 },	// Custom HID
+  */
++	{ "D3000004", 0 },	// D3CMCXXX-115-084 HID
++	{ "D3000005", 0 },	// D3CMCXXX-106-084 HID
++	{ "D3000006", 0 },	// D3CMCXXX-089-084 HID
+ 	{ "INTC10C0", 0 },	// AR0234 HID
+ #if IS_ENABLED(CONFIG_VIDEO_MAX9X)
+ 	{ "INTC10CR", 0 },	// GMSL2 AR0234 HID
+-- 
+2.25.1
+

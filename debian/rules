@@ -5,9 +5,11 @@ include /usr/share/dpkg/pkg-info.mk
 
 DKMS_PACKAGE_NAME = $(shell grep '^PACKAGE_NAME=' dkms.conf | cut -d\" -f2)
 DKMS_PACKAGE_VERSION = $(DEB_VERSION_UPSTREAM)
+DKMS_PACKAGE_REVISION = $(DEB_VERSION_UPSTREAM_REVISION)
 
 generated_dkms_files = \
-  debian/intel-ipu7-dkms.install \
+  debian/intel-ipu-dkms.install \
+  debian/intel-ipu-dkms.links \
   $(empty)
 
 %:
@@ -20,10 +22,13 @@ override_dh_auto_install:
 override_dh_auto_clean:
 
 override_dh_dkms: dkms.conf
-	dh_dkms -V $(DKMS_PACKAGE_VERSION) -- dkms.conf
+	dh_dkms -V $(DEB_VERSION_UPSTREAM_REVISION) -- dkms.conf
 
-override_dh_install: debian/intel-ipu7-dkms.install
+override_dh_install: debian/intel-ipu-dkms.install
 	dh_install --exclude=.gitignore
+
+override_dh_link: debian/intel-ipu-dkms.links
+	dh_link
 
 override_dh_clean:
 	-rm -f $(generated_dkms_files)
@@ -31,5 +36,5 @@ override_dh_clean:
 
 $(generated_dkms_files) : $(generated_dkms_files:=.in) debian/rules
 	sed -e 's,@DKMS_PACKAGE_NAME@,$(DKMS_PACKAGE_NAME),g' \
-	    -e 's,@DKMS_PACKAGE_VERSION@,$(DKMS_PACKAGE_VERSION),g' \
+	    -e 's,@DKMS_PACKAGE_VERSION@,$(DEB_VERSION_UPSTREAM_REVISION),g' \
 	    <$(@:=.in) >$@

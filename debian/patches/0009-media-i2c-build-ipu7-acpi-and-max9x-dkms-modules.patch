@@ -1,0 +1,203 @@
+From 6ba81b8f290624b6083f52ba1cc6dcd677b355ae Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Thu, 11 Sep 2025 08:28:50 -0700
+Subject: [PATCH 09/62] media, i2c : build ipu7 acpi and max9x dkms modules
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ Makefile                         | 16 ++++++-
+ dkms.conf                        | 80 ++++++++++++++++++++++++++------
+ drivers/media/i2c/Makefile       | 15 ++++++
+ drivers/media/i2c/max9x/Makefile |  7 ++-
+ drivers/media/i2c/max9x/serdes.c |  2 +-
+ 5 files changed, 102 insertions(+), 18 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index ca6109f5d..15bc2d153 100644
+--- a/Makefile
++++ b/Makefile
+@@ -3,6 +3,9 @@
+ 
+ KERNELRELEASE ?= $(shell uname -r)
+ KERNEL_SRC ?= /lib/modules/$(KERNELRELEASE)/build
++KERNEL_VERSION := $(shell echo $(KERNELRELEASE) | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
++BUILD_EXCLUSIVE_KERNEL="^(6\.(1[1247])\.)"
++
+ MODSRC := $(shell pwd)
+ 
+ export EXTERNAL_BUILD = 1
+@@ -14,13 +17,22 @@ obj-y += drivers/media/pci/intel/ipu7/
+ obj-y += drivers/media/platform/intel/
+ subdir-ccflags-y += -I$(src)/include
+ 
+-export CONFIG_VIDEO_OV02C10 = m
++export CONFIG_VIDEO_ISX031=m
++export CONFIG_VIDEO_MAX9X=m
++
+ obj-y += drivers/media/i2c/
+ 
++export CONFIG_INTEL_IPU7_ACPI = m
++obj-y += drivers/media/platform/intel/
++
++subdir-ccflags-y += -I$(src)/include/ \
++	-DCONFIG_VIDEO_V4L2_SUBDEV_API
+ subdir-ccflags-$(CONFIG_IPU_BRIDGE) += \
+ 	-DCONFIG_IPU_BRIDGE
++subdir-ccflags-$(CONFIG_VIDEO_INTEL_IPU7) += \
++	-DCONFIG_DEBUG_FS -DCONFIG_VIDEO_INTEL_IPU7_ISYS_RESET
+ subdir-ccflags-$(CONFIG_INTEL_IPU7_ACPI) += \
+-	-DCONFIG_INTEL_IPU7_ACPI
++        -DCONFIG_INTEL_IPU7_ACPI
+ 
+ subdir-ccflags-y += $(subdir-ccflags-m)
+ 
+diff --git a/dkms.conf b/dkms.conf
+index 78a4d7827..940422593 100644
+--- a/dkms.conf
++++ b/dkms.conf
+@@ -1,23 +1,75 @@
+ PACKAGE_NAME="ipu7-drivers"
+ PACKAGE_VERSION="#MODULE_VERSION#"
+ 
+-MAKE="make KERNELRELEASE=$kernelver KERNEL_SRC=$kernel_source_dir"
+-CLEAN="make KERNELRELEASE=$kernelver KERNEL_SRC=$kernel_source_dir clean"
++MAKE="make V=1 KERNELRELEASE=$kernelver KERNEL_SRC=$kernel_source_dir"
++CLEAN="make V=1 KERNELRELEASE=$kernelver KERNEL_SRC=$kernel_source_dir clean"
+ AUTOINSTALL="yes"
+ BUILD_EXCLUSIVE_CONFIG="CONFIG_VIDEO_V4L2_I2C"
+ 
+-BUILT_MODULE_NAME[0]="intel-ipu7"
+-BUILT_MODULE_LOCATION[0]="drivers/media/pci/intel/ipu7"
+-DEST_MODULE_LOCATION[0]="/updates"
++version_lt() {
++  IFS='.' read -r i j k <<< "$1"
++  IFS='.' read -r a b c <<< "$2"
++  i=${i:-0}
++  j=${j:-0}
++  k=${k:-0}
++  a=${a:-0}
++  b=${b:-0}
++  c=${c:-0}
++  if [ "$i" -lt "$a" ]; then
++    return 0
++  elif [ "$i" -eq "$a" ]; then
++    if [ "$j" -lt "$b" ]; then
++      return 0
++    elif [ "$j" -eq "$b" ]; then
++      if [ "$k" -lt "$c" ]; then
++        return 0
++      fi
++    fi
++  fi
++  return 1
++}
+ 
+-BUILT_MODULE_NAME[1]="intel-ipu7-isys"
+-BUILT_MODULE_LOCATION[1]="drivers/media/pci/intel/ipu7"
+-DEST_MODULE_LOCATION[1]="/updates"
++KERNEL_VERSION=$(echo ${kernelver} | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
++KV_I2C_MAX9X=6.14.00
+ 
+-BUILT_MODULE_NAME[2]="intel-ipu7-psys"
+-BUILT_MODULE_LOCATION[2]="drivers/media/pci/intel/ipu7/psys"
+-DEST_MODULE_LOCATION[2]="/updates"
++i=0
+ 
+-BUILT_MODULE_NAME[3]="ov02c10"
+-BUILT_MODULE_LOCATION[3]="drivers/media/i2c"
+-DEST_MODULE_LOCATION[3]="/updates"
++BUILT_MODULE_NAME[$i]="intel-ipu7"
++BUILT_MODULE_LOCATION[$i]="drivers/media/pci/intel/ipu7"
++DEST_MODULE_LOCATION[$i]="/updates"
++STRIP[$i]=no
++
++BUILT_MODULE_NAME[$((++i))]="intel-ipu7-isys"
++BUILT_MODULE_LOCATION[$i]="drivers/media/pci/intel/ipu7"
++DEST_MODULE_LOCATION[$i]="/updates"
++STRIP[$i]=no
++
++BUILT_MODULE_NAME[$((++i))]="intel-ipu7-psys"
++BUILT_MODULE_LOCATION[$i]="drivers/media/pci/intel/ipu7/psys"
++DEST_MODULE_LOCATION[$i]="/updates"
++STRIP[$i]=no
++
++BUILT_MODULE_NAME[$((++i))]="ipu-acpi"
++BUILT_MODULE_LOCATION[$i]="drivers/media/platform/intel"
++DEST_MODULE_LOCATION[$i]="/updates"
++STRIP[$i]=no
++
++BUILT_MODULE_NAME[$((++i))]="ipu-acpi-pdata"
++BUILT_MODULE_LOCATION[$i]="drivers/media/platform/intel"
++DEST_MODULE_LOCATION[$i]="/updates"
++STRIP[$i]=no
++
++BUILT_MODULE_NAME[$((++i))]="ipu-acpi-common"
++BUILT_MODULE_LOCATION[$i]="drivers/media/platform/intel"
++DEST_MODULE_LOCATION[$i]="/updates"
++STRIP[$i]=no
++
++BUILT_MODULE_NAME[$((++i))]="isx031"
++BUILT_MODULE_LOCATION[$i]="drivers/media/i2c"
++DEST_MODULE_LOCATION[$i]="/updates"
++STRIP[$i]=no
++
++BUILT_MODULE_NAME[$((++i))]="max9x"
++BUILT_MODULE_LOCATION[$i]="drivers/media/i2c/max9x"
++DEST_MODULE_LOCATION[$i]="/updates"
++STRIP[$i]=no
+diff --git a/drivers/media/i2c/Makefile b/drivers/media/i2c/Makefile
+index 4385a04d9..0f81bad34 100644
+--- a/drivers/media/i2c/Makefile
++++ b/drivers/media/i2c/Makefile
+@@ -1,4 +1,19 @@
+ # SPDX-License-Identifier: GPL-2.0
+ # Copyright (c) 2024 Intel Corporation.
+ 
++is_kernel_lt_6_10 = $(shell if [ $$(printf "6.10\n$(KERNELVERSION)" | sort -V | head -n1) != "6.10" ]; then echo 1; fi)
++ifeq ($(is_kernel_lt_6_10), 1)
++ifneq ($(EXTERNAL_BUILD), 1)
++src := $(srctree)/$(src)
++endif
++endif
++
++ccflags-y += -I$(srcpath)/$(src)/../../../include/
++ccflags-y += -I$(srcpath)/$(src)/../../../drivers/media/pci/intel/ipu7
++
++ifeq ($(CONFIG_VIDEO_INTEL_IPU7), m)
++	ccflags-y += -DCONFIG_VIDEO_INTEL_IPU7=1
++endif
+ obj-$(CONFIG_VIDEO_OV02C10) += ov02c10.o
++obj-$(CONFIG_VIDEO_ISX031) += isx031.o
++obj-$(CONFIG_VIDEO_MAX9X) += max9x/
+diff --git a/drivers/media/i2c/max9x/Makefile b/drivers/media/i2c/max9x/Makefile
+index fa2c006c5..e42cf22bb 100644
+--- a/drivers/media/i2c/max9x/Makefile
++++ b/drivers/media/i2c/max9x/Makefile
+@@ -1,4 +1,9 @@
+ ccflags-y += -I$(src)/../../pci/intel/ipu7/
+ 
+ obj-m 		+= max9x.o
+-max9x-y += serdes.o max9296.o max96724.o max9295.o max96717.o
+\ No newline at end of file
++max9x-y += serdes.o max9296.o max96724.o max9295.o max96717.o
++#obj-m		+= serdes.o
++#obj-m		+= max9295.o
++#obj-m		+= max9296.o
++#obj-m		+= max96717.o
++#obj-m		+= max96724.o
+diff --git a/drivers/media/i2c/max9x/serdes.c b/drivers/media/i2c/max9x/serdes.c
+index 38d844cb6..0f821c947 100644
+--- a/drivers/media/i2c/max9x/serdes.c
++++ b/drivers/media/i2c/max9x/serdes.c
+@@ -292,7 +292,7 @@ static void parse_sensor_pdata(struct device *dev, const char *sensor_name, char
+ 	snprintf(dev_name, I2C_NAME_SIZE, "%s %s", sensor_name, suffix);
+ 	ser_pdata->subdevs[0].board_info.dev_name = dev_name;
+ 
+-	struct isx031_platform_data *sen_pdata = devm_kzalloc(dev, sizeof(*sen_pdata), GFP_KERNEL);
++	struct sensor_platform_data *sen_pdata = devm_kzalloc(dev, sizeof(*sen_pdata), GFP_KERNEL);
+ 
+ 	if (!sen_pdata)
+ 		return;
+-- 
+2.25.1
+

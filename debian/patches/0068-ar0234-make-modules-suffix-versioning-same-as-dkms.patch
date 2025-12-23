@@ -1,0 +1,22 @@
+From 8ea0c202ec5f508d9bdd371f5d2c9b4b1bb7572a Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Fri, 19 Dec 2025 04:35:58 -0700
+Subject: [PATCH 68/71] ar0234: make modules suffix versioning same as dkms
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/ar0234.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/media/i2c/ar0234.c b/drivers/media/i2c/ar0234.c
+index 9d653b4fd..6ea999526 100644
+--- a/drivers/media/i2c/ar0234.c
++++ b/drivers/media/i2c/ar0234.c
+@@ -2473,3 +2473,4 @@ module_i2c_driver(ar0234_i2c_driver);
+ MODULE_AUTHOR("Chang, Ying <ying.chang@intel.com>");
+ MODULE_DESCRIPTION("ar0234 sensor driver");
+ MODULE_LICENSE("GPL v2");
++MODULE_VERSION(DRIVER_VERSION_SUFFIX);
+-- 
+2.25.1
+

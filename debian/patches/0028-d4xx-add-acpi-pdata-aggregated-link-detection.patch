@@ -1,0 +1,62 @@
+From 1ed4420752bf43df742ade2b896b48026ea8506b Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Fri, 23 May 2025 10:13:04 +0800
+Subject: [PATCH 28/62] d4xx : add acpi pdata aggregated-link detection
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/d4xx.c       | 15 ++++++++++++++-
+ include/media/i2c/d4xx_pdata.h |  1 +
+ 2 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/d4xx.c b/drivers/media/i2c/d4xx.c
+index 050e1e1ef..7cca0aef7 100644
+--- a/drivers/media/i2c/d4xx.c
++++ b/drivers/media/i2c/d4xx.c
+@@ -3245,6 +3245,7 @@ static int ds5_board_setup(struct ds5 *state)
+ 	int err = 0;
+ 	int i;
+ 	char suffix = pdata->suffix;
++	char serdes_suffix[5]; /* suffix string for subdevs */
+ 
+ 	static struct max9295_pdata max9295_pdata = {
+ 		.is_prim_ser = 1, // todo: configurable
+@@ -3291,10 +3292,22 @@ static int ds5_board_setup(struct ds5 *state)
+ 				state->dser_i2c = serdes_inited[i]->dser_i2c;
+ 				state->aggregated = 1;
+ 				break;
++			} else if ( pdata->subdev_info[0].aggregated_link ) {
++				dev_info(dev, "PDATA sensor/serializer AGGREGATED on MAX9296 device 0x%x GMSL port %s\n",
++					 i2c_info_des.addr,
++					 pdata->subdev_info[0].suffix);
++				state->aggregated = 1;
++				break;
+ 			}
+ 		}
+ 	}
+-	if (state->aggregated)
++	if ( pdata->subdev_info[0].aggregated_link ) {
++	  snprintf(serdes_suffix, sizeof(serdes_suffix), "%s", pdata->subdev_info[0].suffix);
++	  dev_info(dev, "PDATA GMSL port suffix %s\n",
++		   i2c_info_des.addr,
++		   serdes_suffix);
++	  suffix = (const char) serdes_suffix[0]; /* d4xx suffix only uses subdevs first char */
++	} else if (state->aggregated)
+ 		suffix += 6;
+ 	dev_info(dev, "Init SerDes %c on %d@0x%x<->%d@0x%x\n",
+ 		suffix,
+diff --git a/include/media/i2c/d4xx_pdata.h b/include/media/i2c/d4xx_pdata.h
+index 73a541855..7f6037d08 100644
+--- a/include/media/i2c/d4xx_pdata.h
++++ b/include/media/i2c/d4xx_pdata.h
+@@ -16,6 +16,7 @@ struct d4xx_subdev_info {
+ 	unsigned short phy_i2c_addr;
+ 	unsigned short ser_alias;
+ 	char suffix[5]; /* suffix for subdevs */
++	int aggregated_link;
+ };
+ 
+ struct d4xx_pdata {
+-- 
+2.25.1
+

@@ -1,0 +1,124 @@
+From 0939fea2fd9c03964b7d514f6a3ab9fdc2c8a9f0 Mon Sep 17 00:00:00 2001
+From: Josh Watts <jwatts@d3embedded.com>
+Date: Wed, 19 Feb 2025 09:29:41 -0500
+Subject: [PATCH 50/71] imx390: add gmsl2 sensor reset gpio
+
+Signed-off-by: Florent Pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/imx390.c | 53 ++++++++++++++++++++++++++++++++------
+ include/media/i2c/imx390.h |  2 +-
+ 2 files changed, 46 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/media/i2c/imx390.c b/drivers/media/i2c/imx390.c
+index fa3b11c8c..ccd957df9 100644
+--- a/drivers/media/i2c/imx390.c
++++ b/drivers/media/i2c/imx390.c
+@@ -294,6 +294,9 @@ struct imx390 {
+ 	bool streaming;
+ 
+ 	struct imx390_platform_data *platform_data;
++#if IS_ENABLED(CONFIG_VIDEO_MAX9X)
++	struct gpio_desc *reset_gpio;
++#endif
+ };
+ 
+ #include "imx390-mode-1280x960-CROP.h"
+@@ -1095,6 +1098,23 @@ static u32 supported_formats[] = {
+ 	MEDIA_BUS_FMT_SGRBG12_1X12,
+ };
+ 
++#if IS_ENABLED(CONFIG_VIDEO_MAX9X)
++static int imx390_reset(struct gpio_desc *reset_gpio)
++{
++	if (!IS_ERR_OR_NULL(reset_gpio)) {
++		gpiod_set_value_cansleep(reset_gpio, 0);
++		usleep_range(500, 1000);
++		gpiod_set_value_cansleep(reset_gpio, 1);
++		/*Needs to sleep for quite a while before register writes*/
++		usleep_range(200 * 1000, 200 * 1000 + 500);
++
++		return 0;
++	}
++
++	return -EINVAL;
++}
++#endif
++
+ static int imx390_read_reg(struct imx390 *imx390, u16 reg, u16 len, u32 *val)
+ {
+ 	struct i2c_client *client = v4l2_get_subdevdata(&imx390->sd);
+@@ -1750,6 +1770,10 @@ static int __maybe_unused imx390_resume(struct device *dev)
+ 	}
+ 
+ 	mutex_lock(&imx390->mutex);
++#if IS_ENABLED(CONFIG_VIDEO_MAX9X)
++	if (imx390->reset_gpio != NULL)
++		imx390_reset(imx390->reset_gpio);
++#endif
+ 	if (imx390->streaming) {
+ 		ret = imx390_start_streaming(imx390);
+ 		if (ret) {
+@@ -2055,14 +2079,32 @@ static int imx390_probe(struct i2c_client *client)
+ 		return -ENOMEM;
+ 
+ 	imx390->platform_data = client->dev.platform_data;
+-	if (imx390->platform_data == NULL) {
+-		dev_err(&client->dev, "no platform data provided\n");
+-		return -EINVAL;
++	if (imx390->platform_data == NULL)
++		dev_warn(&client->dev, "no platform data provided\n");
++
++	/* reset sensor */
++	imx390->reset_gpio = devm_gpiod_get_optional(&client->dev, "reset",
++						     GPIOD_OUT_HIGH);
++	if (IS_ERR(imx390->reset_gpio))
++		return -EPROBE_DEFER;
++	else if (imx390->reset_gpio == NULL)
++		dev_warn(&client->dev, "Reset GPIO not found");
++	else {
++		dev_dbg(&client->dev, "Found reset GPIO");
++		imx390_reset(imx390->reset_gpio);
+ 	}
+ 
+ 	/* initialize subdevice */
+ 	sd = &imx390->sd;
+ 	v4l2_i2c_subdev_init(sd, client, &imx390_subdev_ops);
++
++	if (imx390->platform_data) {
++		if (imx390->platform_data->suffix)
++			snprintf(imx390->sd.name, sizeof(imx390->sd.name), "imx390 %s",
++				 imx390->platform_data->suffix);
++	} else {
++		v4l2_i2c_subdev_set_name(sd, client, dev_name(&client->dev), NULL);
++	}
+ 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
+ 	sd->internal_ops = &imx390_internal_ops;
+ 	sd->entity.ops = &imx390_subdev_entity_ops;
+@@ -2083,11 +2125,6 @@ static int imx390_probe(struct i2c_client *client)
+ 		return ret;
+ 	}
+ 
+-	if (imx390->platform_data->suffix)
+-		snprintf(imx390->sd.name,
+-				sizeof(imx390->sd.name), "imx390 %c",
+-				imx390->platform_data->suffix);
+-
+ 	mutex_init(&imx390->mutex);
+ 
+ 	/* 1920x1200 default */
+diff --git a/include/media/i2c/imx390.h b/include/media/i2c/imx390.h
+index c613e3519..0d48c970a 100644
+--- a/include/media/i2c/imx390.h
++++ b/include/media/i2c/imx390.h
+@@ -19,7 +19,7 @@ struct imx390_platform_data {
+ 	int irq_pin;
+ 	unsigned int irq_pin_flags;
+ 	char irq_pin_name[16];
+-	char suffix;
++	char suffix[5];
+ 	int gpios[4];
+ };
+ 
+-- 
+2.25.1
+

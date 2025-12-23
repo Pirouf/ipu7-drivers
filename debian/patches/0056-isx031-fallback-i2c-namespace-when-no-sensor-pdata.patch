@@ -1,0 +1,101 @@
+From d0a4bb5ff7e313b165b6332c3ff7485b06a8dace Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Tue, 28 Oct 2025 12:16:08 -0700
+Subject: [PATCH 56/71] isx031: fallback i2c namespace when no sensor pdata
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/isx031.c | 39 +++++++++++++++++++++++++++++---------
+ 1 file changed, 30 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/media/i2c/isx031.c b/drivers/media/i2c/isx031.c
+index d71a1d44e..eb7113046 100644
+--- a/drivers/media/i2c/isx031.c
++++ b/drivers/media/i2c/isx031.c
+@@ -363,6 +363,12 @@ static int isx031_set_driver_mode(struct isx031 *isx031)
+ 	int ret;
+ 	int mode;
+ 
++	if (!isx031->lanes)
++		return -EINVAL;
++
++	if (!isx031->cur_mode)
++		return -EINVAL;
++
+ 	mode = isx031_find_driver_mode(isx031->lanes, isx031->cur_mode->fps);
+ 	if (mode < 0)
+ 		return mode;
+@@ -394,6 +400,8 @@ static int isx031_mode_transit(struct isx031 *isx031, int state)
+ 	}
+ 	cur_mode = val;
+ 
++	dev_dbg(&client->dev, "sensor nlanes=%d in mode 0x%x", isx031->lanes, val );
++
+ 	//TODO: only set if isx031->lanes != 0, means get lanes from pdata
+ 	ret = isx031_set_driver_mode(isx031);
+ 	if (ret) {
+@@ -449,7 +457,7 @@ static int isx031_identify_module(struct isx031 *isx031)
+ 	dev_dbg(&client->dev, "sensor in mode 0x%x", val);
+ 
+ 	/* if sensor alreay in ISX031_STATE_STARTUP, can access i2c write directly*/
+-	if (val == ISX031_STATE_STREAMING) {
++	if (isx031->cur_mode && val == ISX031_STATE_STREAMING) {
+ 		if (isx031_mode_transit(isx031, ISX031_STATE_STARTUP))
+ 			return ret;
+ 	}
+@@ -818,6 +826,15 @@ static int isx031_probe(struct i2c_client *client)
+ 	/* initialize subdevice */
+ 	sd = &isx031->sd;
+ 	v4l2_i2c_subdev_init(sd, client, &isx031_subdev_ops);
++	if (isx031->platform_data &&
++	    isx031->platform_data->suffix &&
++	    strnlen(isx031->platform_data->suffix, 5) > 0) {
++		snprintf(sd->name,
++			 sizeof(sd->name), "isx031 %s",
++			 isx031->platform_data->suffix);
++	} else {
++		v4l2_i2c_subdev_set_name(sd, client, dev_name(&client->dev), NULL);
++	}
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0)
+ 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
+ #else
+@@ -836,24 +853,28 @@ static int isx031_probe(struct i2c_client *client)
+ 		return ret;
+ 	}
+ 
++	if (isx031->platform_data && isx031->platform_data->lanes) {
++		isx031->lanes = isx031->platform_data->lanes;
++		dev_dbg(&client->dev, "sensor %s pdata nlanes=%u",
++			sd->name,
++			isx031->lanes);
++	}
++
++	if (!isx031->lanes)
++		isx031->lanes = 2; /* x2 laneUsed  default */
++
+ 	ret = isx031_identify_module(isx031);
+ 	if (ret) {
+ 		dev_err(&client->dev, "failed to find sensor: %d", ret);
+ 		return ret;
+ 	}
+ 
+-	if (isx031->platform_data && isx031->platform_data->suffix)
+-		snprintf(isx031->sd.name, sizeof(isx031->sd.name), "isx031 %s",
+-			 isx031->platform_data->suffix);
+-
+-	if (isx031->platform_data && isx031->platform_data->lanes)
+-		isx031->lanes = isx031->platform_data->lanes;
+-
+ 	mutex_init(&isx031->mutex);
+ 
+ 	/* 1920x1536 default */
+ 	isx031->cur_mode = NULL;
+-	isx031->pre_mode = &supported_modes[0];
++	isx031->pre_mode = &supported_modes[2];
++
+ 	reg_list = &isx031->pre_mode->reg_list;
+ 	ret = isx031_write_reg_list(isx031, reg_list);
+ 	if (ret) {
+-- 
+2.25.1
+

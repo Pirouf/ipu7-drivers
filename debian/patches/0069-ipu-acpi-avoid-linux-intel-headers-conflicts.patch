@@ -1,0 +1,44 @@
+From 995f51bf57ae1a356b2ca43ca28f2c6df9634a0f Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Fri, 19 Dec 2025 20:14:51 +0800
+Subject: [PATCH 69/71] ipu-acpi : avoid linux intel headers conflicts
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ Makefile                              | 5 +++++
+ drivers/media/platform/intel/Makefile | 3 ++-
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 1ecf15466..1acdfe7b9 100644
+--- a/Makefile
++++ b/Makefile
+@@ -10,6 +10,11 @@ MODSRC := $(shell pwd)
+ 
+ subdir-ccflags-y += -DDRIVER_VERSION_SUFFIX=\"${DRIVER_VERSION_SUFFIX}\"
+ 
++# Define config macros for conditional compilation in ipu6-acpi.c
++# IS_ENABLED() checks for CONFIG_XXX or CONFIG_XXX_MODULE
++subdir-ccflags-y += -DCONFIG_VIDEO_MAX9X_MODULE=1
++subdir-ccflags-y += -DCONFIG_VIDEO_ISX031_MODULE=1
++
+ export EXTERNAL_BUILD = 1
+ export CONFIG_VIDEO_INTEL_IPU7 = m
+ export CONFIG_VIDEO_INTEL_IPU6 = m
+diff --git a/drivers/media/platform/intel/Makefile b/drivers/media/platform/intel/Makefile
+index d0c41b731..10ade96a3 100644
+--- a/drivers/media/platform/intel/Makefile
++++ b/drivers/media/platform/intel/Makefile
+@@ -8,7 +8,8 @@ src := $(srctree)/$(src)
+ endif
+ endif
+ 
+-ccflags-y += -I$(src)/../../pci/intel/ipu7/
++# ipu7-dkms appendix
++CC := ${CC} -I$(src)/../../../../include -I$(src)/../../pci/intel/ipu7/
+ 
+ ifneq ($(filter y m, $(CONFIG_INTEL_IPU7_ACPI)),)
+ obj-$(CONFIG_INTEL_IPU7_ACPI) += ipu-acpi.o \
+-- 
+2.25.1
+

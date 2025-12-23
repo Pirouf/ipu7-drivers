@@ -1,0 +1,26 @@
+From 357bce32f5ec9ee91101507c1c2f21105fd7f62a Mon Sep 17 00:00:00 2001
+From: florent pirou <florent.pirou@intel.com>
+Date: Tue, 16 Jan 2024 06:32:20 -0700
+Subject: [PATCH 15/62] d4xx: force uapi isys headers include
+
+Signed-off-by: florent pirou <florent.pirou@intel.com>
+---
+ drivers/media/i2c/d4xx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/d4xx.c b/drivers/media/i2c/d4xx.c
+index 39d81f8b4..2d0ab292d 100644
+--- a/drivers/media/i2c/d4xx.c
++++ b/drivers/media/i2c/d4xx.c
+@@ -31,7 +31,7 @@
+ #include <linux/videodev2.h>
+ #include <linux/version.h>
+ #ifdef CONFIG_VIDEO_INTEL_IPU6
+-#include <linux/ipu-isys.h>
++#include <uapi/linux/ipu-isys.h>
+ #include <media/i2c/d4xx_pdata.h>
+ #endif
+ #include <media/media-entity.h>
+-- 
+2.25.1
+
