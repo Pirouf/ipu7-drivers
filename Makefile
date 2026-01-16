@@ -4,7 +4,7 @@
 KERNELRELEASE ?= $(shell uname -r)
 KERNEL_SRC ?= /lib/modules/$(KERNELRELEASE)/build
 KERNEL_VERSION := $(shell echo $(KERNELRELEASE) | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
-BUILD_EXCLUSIVE_KERNEL="^(6\.(1[1247])\.)"
+BUILD_EXCLUSIVE_KERNEL="^(6\.(1[278])\.)"
 
 MODSRC := $(shell pwd)
 
@@ -18,7 +18,7 @@ subdir-ccflags-y += -DCONFIG_VIDEO_ISX031_MODULE=1
 export EXTERNAL_BUILD = 1
 export CONFIG_VIDEO_INTEL_IPU7 = m
 export CONFIG_VIDEO_INTEL_IPU6 = m
-export CONFIG_IPU_BRIDGE = y
+export CONFIG_IPU_BRIDGE = n
 export CONFIG_INTEL_IPU7_ACPI = m
 export CONFIG_VIDEO_INTEL_IPU7_EXT_CTRLS = y
 
